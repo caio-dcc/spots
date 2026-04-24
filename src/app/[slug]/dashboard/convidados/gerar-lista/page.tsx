@@ -199,21 +199,21 @@ export default function GerarListaPage() {
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6 shadow-sm print:hidden">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1 border-r border-zinc-100 pr-6">
-            <h2 className="text-lg font-bold text-zinc-900 mb-4 uppercase text-sm tracking-wide">Configurar Título</h2>
-            <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase">Título da Lista</label><Input placeholder="Ex: Lista VIP - Sábado" value={listTitle} onChange={e => setListTitle(e.target.value)} className="bg-zinc-50 font-bold" /></div>
+            <h2 className="text-lg font-bold text-zinc-900 mb-4 text-sm tracking-tight">Configurar título</h2>
+            <div className="space-y-2.5"><label className="text-xs font-bold text-zinc-500">Título da lista</label><Input placeholder="Ex: Lista VIP - Sábado" value={listTitle} onChange={e => setListTitle(e.target.value)} className="bg-zinc-50 font-bold" /></div>
           </div>
           <div className="flex-[3]">
-            <h2 className="text-lg font-bold text-zinc-900 mb-4 uppercase text-sm tracking-wide">Adicionar Venda / Convidado</h2>
+            <h2 className="text-lg font-bold text-zinc-900 mb-4 text-sm tracking-tight">Adicionar venda / convidado</h2>
             <div className="flex items-end gap-4">
-              <div className="flex-[2] space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase">Nome Completo</label><Input placeholder="Digite o nome..." value={nome} onChange={e => setNome(e.target.value)} className="bg-zinc-50 font-bold" onKeyDown={e => e.key === 'Enter' && handleAdd()} /></div>
-              <div className="flex-1 space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase">Tipo de Ingresso</label>
+              <div className="flex-[2] space-y-2.5"><label className="text-xs font-bold text-zinc-500">Nome completo</label><Input placeholder="Digite o nome..." value={nome} onChange={e => setNome(e.target.value)} className="bg-zinc-50 font-bold" onKeyDown={e => e.key === 'Enter' && handleAdd()} /></div>
+              <div className="flex-1 space-y-2.5">
+                <label className="text-xs font-bold text-zinc-500">Tipo de ingresso</label>
                 <select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={selectedBenefit} onChange={e => setSelectedBenefit(e.target.value)}>
-                  <option value="">Ingresso Normal</option>
+                  <option value="">Ingresso normal</option>
                   {eventBenefits.map(b => <option key={b.id} value={b.id}>{b.nome} - R$ {Number(b.valor).toFixed(2)}</option>)}
                 </select>
               </div>
-              <div className="w-24 space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase">Qtd</label><select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={quantidade} onChange={e => setQuantidade(Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+              <div className="w-24 space-y-2.5"><label className="text-xs font-bold text-zinc-500">Qtd</label><select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={quantidade} onChange={e => setQuantidade(Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
               <Button onClick={handleAdd} className="bg-ruby hover:bg-ruby/90 text-white h-10 w-10 p-0 shrink-0 cursor-pointer shadow-lg shadow-ruby/20"><Check className="w-5 h-5" /></Button>
             </div>
             {error && <div className="flex items-center gap-2 mt-3 text-red-600 text-xs font-bold uppercase"><AlertCircle className="w-4 h-4" />{error}</div>}
@@ -221,14 +221,14 @@ export default function GerarListaPage() {
         </div>
       </div>
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm printable-area">
-        <div className="print:hidden p-4 border-b border-zinc-200 bg-zinc-50"><h3 className="font-bold text-zinc-700 uppercase text-xs tracking-widest">{listTitle || "Lista de Convidados / Vendas"}</h3></div>
+        <div className="print:hidden p-4 border-b border-zinc-200 bg-zinc-50"><h3 className="font-bold text-zinc-700 text-xs tracking-tight">{listTitle || "Lista de convidados / vendas"}</h3></div>
         <div className="hidden print:block p-8 pb-4 text-center"><h1 className="text-2xl font-bold">{listTitle || "Lista de Convidados / Vendas"}</h1></div>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-zinc-50"><TableRow className="not-italic"><TableHead className="w-16 text-center font-bold text-zinc-900">Nº</TableHead><TableHead className="font-bold text-zinc-900">Nome do Convidado</TableHead><TableHead className="font-bold text-zinc-900">Tipo de Ingresso</TableHead><TableHead className="text-right pr-8 font-bold text-zinc-900">Quantidade</TableHead><TableHead className="w-20 text-center hidden print:table-cell font-bold text-zinc-900">Check</TableHead></TableRow></TableHeader>
+            <TableHeader className="bg-zinc-50"><TableRow className="not-italic"><TableHead className="w-16 text-center font-bold text-zinc-900">Nº</TableHead><TableHead className="font-bold text-zinc-900">Nome do convidado</TableHead><TableHead className="font-bold text-zinc-900">Tipo de ingresso</TableHead><TableHead className="text-right pr-8 font-bold text-zinc-900">Quantidade</TableHead><TableHead className="w-20 text-center hidden print:table-cell font-bold text-zinc-900">Check</TableHead></TableRow></TableHeader>
             <TableBody>
-              {guests.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center py-12 text-zinc-500 text-xs font-bold uppercase">A lista está vazia.</TableCell></TableRow> : guests.map((g, idx) => (
-                <TableRow key={g.id} className="not-italic"><TableCell className="text-center font-bold text-zinc-300">{idx + 1}</TableCell><TableCell className="font-bold text-zinc-900">{g.nome}</TableCell><TableCell className="text-zinc-600 font-medium text-xs uppercase">{g.benefit_name || 'NORMAL'}</TableCell><TableCell className="text-right pr-8">
+              {guests.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center py-12 text-zinc-500 text-xs font-bold">A lista está vazia.</TableCell></TableRow> : guests.map((g, idx) => (
+                <TableRow key={g.id} className="not-italic"><TableCell className="text-center font-bold text-zinc-300">{idx + 1}</TableCell><TableCell className="font-bold text-zinc-900">{g.nome}</TableCell><TableCell className="text-zinc-600 font-medium text-xs">{g.benefit_name || 'Normal'}</TableCell><TableCell className="text-right pr-8">
                   {editingId === g.id ? (<div className="flex items-center justify-end gap-2"><select className="h-8 w-16 rounded-md border border-zinc-200 bg-white px-2 text-sm cursor-pointer" value={editQuantity} onChange={e => setEditQuantity(Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}</select><Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600 cursor-pointer" onClick={() => handleSaveEdit(g.id)}><Check className="w-4 h-4" /></Button></div>) : (
                   <div className="flex items-center justify-end gap-2 group"><span className="text-zinc-600 font-bold">{g.quantidade} ingressos</span><button onClick={() => { setEditingId(g.id); setEditQuantity(g.quantidade); }} className="p-1.5 text-zinc-400 hover:text-ruby opacity-0 group-hover:opacity-100 transition-opacity print:hidden cursor-pointer"><Pencil className="w-3.5 h-3.5" /></button></div>)}
                 </TableCell><TableCell className="hidden print:table-cell text-center"><div className="w-5 h-5 border-2 border-zinc-800 rounded-sm mx-auto"></div></TableCell></TableRow>

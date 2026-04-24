@@ -36,7 +36,7 @@ export default function RootLayout({
           })();
         ` }} />
       </head>
-      <body className="min-h-full flex flex-col font-sansation">
+      <body className="min-h-full flex flex-col font-sans">
         {children}
         <Toaster position="top-right" richColors closeButton />
       </body>
