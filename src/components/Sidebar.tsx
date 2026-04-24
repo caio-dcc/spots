@@ -12,7 +12,8 @@ import {
   ChevronUp, 
   LogOut,
   User,
-  PieChart
+  PieChart,
+  ClipboardList
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TextPressure } from "./TextPressure";
