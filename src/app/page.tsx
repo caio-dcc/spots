@@ -59,17 +59,35 @@ export default function LoginPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+      if (!user) throw new Error("Usuário não encontrado");
+
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('theater_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (role?.theater_id) {
+        const { data: theater } = await supabase
+          .from('theaters')
+          .select('slug')
+          .eq('id', role.theater_id)
+          .single();
+        
+        if (theater) {
+          const cleanSlug = theater.slug.replace('teatro-', '');
+          router.push(`/${cleanSlug}/dashboard`);
+          return;
+        }
+      }
+
       router.push("/dashboard");
     } catch (error: any) {
       alert(error.message || "Erro ao fazer login");

@@ -8,6 +8,7 @@ import { Save, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { maskCPF, maskPhone, validateEmployee, ValidationError } from "@/lib/masks";
+import { logAction } from "@/lib/audit";
 
 export default function CadastrarFuncionarioPage() {
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,8 @@ export default function CadastrarFuncionarioPage() {
         });
 
       if (insertError) throw insertError;
+
+      await logAction(roleData.theater_id, 'CADASTROU FUNCIONÁRIO', 'employees', nome);
 
       toast.success("Funcionário cadastrado com sucesso!");
       router.push("/dashboard/funcionarios/listar");

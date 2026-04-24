@@ -27,26 +27,42 @@ export function Sidebar() {
   });
   
   const [username, setUsername] = useState("Carregando...");
+  const [slug, setSlug] = useState("");
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
-    const fetchUsername = async () => {
+    const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      
       const { data: role } = await supabase
         .from('user_roles')
-        .select('username')
+        .select('username, theater_id')
         .eq('user_id', user.id)
         .single();
+      
       setUsername(role?.username || user.email || "Usuário");
+      
+      if (role?.theater_id) {
+        const { data: theater } = await supabase
+          .from('theaters')
+          .select('slug')
+          .eq('id', role.theater_id)
+          .single();
+        if (theater) {
+          const cleanSlug = theater.slug.replace('teatro-', '');
+          setSlug(cleanSlug);
+        }
+      }
     };
-    fetchUsername();
+    fetchData();
   }, []);
 
-  const isActive = (path: string) => pathname?.startsWith(path);
+  const isActive = (path: string) => pathname?.includes(path);
+  const base = slug ? `/${slug}/dashboard` : '/dashboard';
 
   return (
-    <aside className="w-64 border-r border-zinc-200 bg-white h-screen flex flex-col hidden md:flex">
+    <aside className="w-64 border-r border-zinc-200 bg-white h-screen flex flex-col hidden md:flex font-sansation">
       {/* Logo */}
       <div className="h-20 flex items-center justify-center px-6 border-b border-zinc-100 gap-3">
         <img src="/favicon.png" alt="SpotMe Logo" className="w-8 h-8 object-contain" />
@@ -56,10 +72,10 @@ export function Sidebar() {
       {/* Navegação */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         <Link 
-          href="/dashboard" 
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${pathname === '/dashboard' ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
+          href={base} 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${pathname === base ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
         >
-          <LayoutDashboard className={`w-[17px] h-[17px] ${pathname === '/dashboard' ? 'text-ruby' : 'text-zinc-500'}`} />
+          <LayoutDashboard className={`w-[17px] h-[17px] ${pathname === base ? 'text-ruby' : 'text-zinc-500'}`} />
           Visão Geral
         </Link>
 
@@ -73,8 +89,8 @@ export function Sidebar() {
             <ChevronDown className="w-4 h-4 text-zinc-400" />
           </div>
           <div className="mt-1 ml-9 space-y-1">
-            <Link href="/dashboard/eventos/listar" className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Listar</Link>
-            <Link href="/dashboard/eventos/cadastrar" className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Cadastrar</Link>
+            <Link href={`${base}/eventos/listar`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Listar</Link>
+            <Link href={`${base}/eventos/cadastrar`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Cadastrar</Link>
           </div>
         </div>
 
@@ -88,8 +104,8 @@ export function Sidebar() {
             <ChevronDown className="w-4 h-4 text-zinc-400" />
           </div>
           <div className="mt-1 ml-9 space-y-1">
-            <Link href="/dashboard/funcionarios/listar" className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Listar</Link>
-            <Link href="/dashboard/funcionarios/cadastrar" className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Cadastrar</Link>
+            <Link href={`${base}/funcionarios/listar`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Listar</Link>
+            <Link href={`${base}/funcionarios/cadastrar`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Cadastrar</Link>
           </div>
         </div>
 
@@ -103,31 +119,39 @@ export function Sidebar() {
             <ChevronDown className="w-4 h-4 text-zinc-400" />
           </div>
           <div className="mt-1 ml-9 space-y-1">
-            <Link href="/dashboard/convidados/gerar-lista" className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Gerar Lista</Link>
+            <Link href={`${base}/convidados/gerar-lista`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Gerar Lista</Link>
           </div>
         </div>
 
         <Link 
-          href="/dashboard/calendario" 
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/dashboard/calendario') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100 mt-2'}`}
+          href={`${base}/calendario`} 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/calendario') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100 mt-2'}`}
         >
-          <Calendar className={`w-[17px] h-[17px] ${isActive('/dashboard/calendario') ? 'text-ruby' : 'text-zinc-500'}`} />
+          <Calendar className={`w-[17px] h-[17px] ${isActive('/calendario') ? 'text-ruby' : 'text-zinc-500'}`} />
           Calendário
         </Link>
         
         <Link 
-          href="/dashboard/relatorios" 
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/dashboard/relatorios') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
+          href={`${base}/relatorios`} 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/relatorios') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
         >
-          <PieChart className={`w-[17px] h-[17px] ${isActive('/dashboard/relatorios') ? 'text-ruby' : 'text-zinc-500'}`} />
+          <PieChart className={`w-[17px] h-[17px] ${isActive('/relatorios') ? 'text-ruby' : 'text-zinc-500'}`} />
           Relatórios
         </Link>
         
         <Link 
-          href="/dashboard/configuracoes" 
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/dashboard/configuracoes') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
+          href={`${base}/auditoria`} 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/auditoria') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
         >
-          <Settings className={`w-[17px] h-[17px] ${isActive('/dashboard/configuracoes') ? 'text-ruby' : 'text-zinc-500'}`} />
+          <ClipboardList className={`w-[17px] h-[17px] ${isActive('/auditoria') ? 'text-ruby' : 'text-zinc-500'}`} />
+          Auditoria
+        </Link>
+        
+        <Link 
+          href={`${base}/configuracoes`} 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/configuracoes') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
+        >
+          <Settings className={`w-[17px] h-[17px] ${isActive('/configuracoes') ? 'text-ruby' : 'text-zinc-500'}`} />
           Configurações
         </Link>
       </nav>

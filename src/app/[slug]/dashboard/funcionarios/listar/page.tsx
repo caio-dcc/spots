@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { maskCPF, maskPhone, validateEmployee, ValidationError } from "@/lib/masks";
+import { logAction } from "@/lib/audit";
 
 export default function ListarFuncionariosPage() {
   const [data, setData] = useState<any[]>([]);
@@ -139,12 +140,20 @@ export default function ListarFuncionariosPage() {
     if (!deletingFunc) return;
     setDeleting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
+
       const { error } = await supabase
         .from('employees')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', deletingFunc.id);
 
       if (error) throw error;
+      
+      if (role?.theater_id) {
+        await logAction(role.theater_id, 'EXCLUIU FUNCIONÁRIO', 'employees', deletingFunc.nome);
+      }
       
       toast.success("Funcionário excluído com sucesso!");
       setIsDeleteModalOpen(false);

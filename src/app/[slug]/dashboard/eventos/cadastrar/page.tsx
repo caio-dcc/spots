@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { maskCurrency, unmaskCurrency, validateEvent, ValidationError } from "@/lib/masks";
 import { toast } from "sonner";
+import { logAction } from "@/lib/audit";
 
 interface Beneficio { id: string; nome: string; valor_mask: string; }
 interface FuncionarioAssociado { id: string; nome: string; cargo: string; temDiaria: boolean; valorDiaria: number | ""; }

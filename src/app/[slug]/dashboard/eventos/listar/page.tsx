@@ -9,6 +9,7 @@ import { Search, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2, AlertTriangl
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { maskCurrency, unmaskCurrency, validateEvent, ValidationError } from "@/lib/masks";
+import { logAction } from "@/lib/audit";
 
 import { toast } from "sonner";
 
@@ -111,6 +112,12 @@ export default function ListarEventosPage() {
 
       if (error) throw error;
       
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user?.id).single();
+      if (role?.theater_id) {
+        await logAction(role.theater_id, 'EDITOU EVENTO', 'events', editingEvent.title);
+      }
+
       toast.success("Evento atualizado com sucesso!");
       setIsModalOpen(false);
       fetchEventos();
@@ -138,6 +145,12 @@ export default function ListarEventosPage() {
 
       if (error) throw error;
       
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user?.id).single();
+      if (role?.theater_id) {
+        await logAction(role.theater_id, 'EXCLUIU EVENTO', 'events', deletingEvent.title);
+      }
+
       toast.success("Evento excluído com sucesso!");
       setIsDeleteModalOpen(false);
       fetchEventos();
