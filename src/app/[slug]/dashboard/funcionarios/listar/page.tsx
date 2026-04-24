@@ -169,7 +169,7 @@ export default function ListarFuncionariosPage() {
   const getError = (field: string) => errors.find(e => e.field === field)?.message;
 
   return (
-    <div className="p-8 w-full h-full flex flex-col items-center animate-in fade-in duration-500 overflow-y-auto font-sans">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto font-sans">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Funcionários</h1>
