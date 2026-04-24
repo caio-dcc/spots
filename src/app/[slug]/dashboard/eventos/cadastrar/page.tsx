@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Save, Users, Ticket, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { maskCurrency, unmaskCurrency, validateEvent, ValidationError } from "@/lib/masks";
 import { toast } from "sonner";
 import { logAction } from "@/lib/audit";
@@ -15,6 +15,7 @@ interface FuncionarioAssociado { id: string; nome: string; cargo: string; temDia
 
 export default function CadastrarEventoPage() {
   const router = useRouter();
+  const params = useParams();
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   
@@ -110,7 +111,7 @@ export default function CadastrarEventoPage() {
       }
       
       toast.success("Evento cadastrado com sucesso!");
-      router.push("/dashboard/eventos/listar");
+      router.push(`/${params.slug}/dashboard/eventos/listar`);
     } catch (err: any) { 
       console.error(err);
       toast.error(err.message || "Erro ao salvar."); 

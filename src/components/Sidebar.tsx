@@ -141,14 +141,6 @@ export function Sidebar() {
         </Link>
         
         <Link 
-          href={`${base}/auditoria`} 
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/auditoria') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
-        >
-          <ClipboardList className={`w-[17px] h-[17px] ${isActive('/auditoria') ? 'text-ruby' : 'text-zinc-500'}`} />
-          Auditoria
-        </Link>
-        
-        <Link 
           href={`${base}/configuracoes`} 
           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold not-italic transition-colors ${isActive('/configuracoes') ? 'bg-ruby/10 text-ruby' : 'text-ruby hover:bg-zinc-100'}`}
         >

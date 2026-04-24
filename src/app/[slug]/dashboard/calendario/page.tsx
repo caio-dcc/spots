@@ -21,7 +21,13 @@ export default function CalendarioPage() {
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
     const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
     try {
-      const { data, error } = await supabase.from('events').select('id, title, event_date').is('deleted_at', null).gte('event_date', start).lte('event_date', end).order('event_date');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
+      const tId = role?.theater_id;
+      if (!tId) return;
+
+      const { data, error } = await supabase.from('events').select('id, title, event_date').eq('theater_id', tId).is('deleted_at', null).gte('event_date', start).lte('event_date', end).order('event_date');
       if (error) throw error;
       setEvents(data || []);
     } catch (err) { console.error(err); } finally { setLoading(false); }

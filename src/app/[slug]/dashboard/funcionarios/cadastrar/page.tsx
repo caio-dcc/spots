@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Save, User, Loader2 } from "lucide-react";
@@ -14,6 +14,7 @@ export default function CadastrarFuncionarioPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const router = useRouter();
+  const params = useParams();
   
   // Estados do formulário
   const [nome, setNome] = useState("");
@@ -68,7 +69,7 @@ export default function CadastrarFuncionarioPage() {
       await logAction(roleData.theater_id, 'CADASTROU FUNCIONÁRIO', 'employees', nome);
 
       toast.success("Funcionário cadastrado com sucesso!");
-      router.push("/dashboard/funcionarios/listar");
+      router.push(`/${params.slug}/dashboard/funcionarios/listar`);
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
       toast.error(error.message || "Erro ao cadastrar funcionário.");

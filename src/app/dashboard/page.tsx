@@ -30,7 +30,8 @@ export default function DashboardRootPage() {
           .single();
         
         if (theater) {
-          router.replace(`/dashboard/${theater.slug}`);
+          const cleanSlug = theater.slug.replace('teatro-', '');
+          router.replace(`/${cleanSlug}/dashboard`);
           return;
         }
       }
