@@ -150,7 +150,7 @@ export default function GerarListaPage() {
         event_id: selectedEventId, 
         theater_id: role.theater_id, 
         name: g.nome, 
-        quantity: g.quantity || g.quantidade, 
+        quantity: g.quantidade, 
         checked_in: false,
         benefit_id: g.benefit_id || null
       }));
