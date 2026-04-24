@@ -172,7 +172,7 @@ export default function ListarEventosPage() {
   const getError = (field: string) => errors.find(e => e.field === field)?.message;
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto font-sansation">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto font-sans">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Eventos</h1>

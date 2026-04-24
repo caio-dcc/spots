@@ -43,10 +43,10 @@ export default function DashboardRootPage() {
   }, [router]);
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-zinc-50 font-sansation">
-      <div className="flex flex-col items-center gap-3 text-zinc-500">
-        <Loader2 className="w-10 h-10 animate-spin text-ruby" />
-        <p className="text-sm font-medium uppercase tracking-wider">Redirecionando para seu teatro...</p>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-50 font-sans p-4">
+      <div className="flex flex-col items-center gap-4 text-zinc-500">
+        <Loader2 className="w-12 h-12 animate-spin text-ruby" />
+        <p className="text-sm font-medium tracking-tight">Redirecionando para seu teatro...</p>
       </div>
     </div>
   );

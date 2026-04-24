@@ -159,12 +159,12 @@ export default function ConfiguracoesPage() {
           )}
           {loadingUsers ? <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-zinc-400" /></div> : users.length > 0 && (
             <div className="space-y-2 border-t border-zinc-100 pt-4">
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Contas Cadastradas</label>
+              <label className="text-xs font-bold text-zinc-400 mb-2 block">Contas cadastradas</label>
               {users.map(user => (
                 <div key={user.id} className="flex items-center justify-between p-3 bg-zinc-50 border border-zinc-200 rounded-md">
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold text-zinc-900">{user.username}</span>
-                    <span className="text-xs text-zinc-500 uppercase">{user.is_sudo ? 'SUDO' : user.role}</span>
+                    <span className="text-xs text-zinc-500">{user.is_sudo ? 'Sudo' : user.role}</span>
                   </div>
                   {isSudo && !user.is_sudo && (
                     <Button variant="ghost" onClick={() => handleRemoveUser(user.id, user.user_id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0 cursor-pointer"><Trash2 className="w-4 h-4" /></Button>

@@ -110,6 +110,8 @@ export default function CadastrarEventoPage() {
         await supabase.from('event_staff').insert(staff);
       }
       
+      await logAction(role.theater_id, 'CADASTROU EVENTO', 'events', title);
+      
       toast.success("Evento cadastrado com sucesso!");
       router.push(`/${params.slug}/dashboard/eventos/listar`);
     } catch (err: any) { 

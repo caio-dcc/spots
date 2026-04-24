@@ -167,9 +167,9 @@ export default function GerarListaPage() {
   };
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sansation">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sans">
       <div className="flex justify-between items-center mb-6 print:hidden">
-        <div><h1 className="text-3xl font-bold tracking-tight text-ruby">Gerar Lista de Convidados</h1><p className="text-zinc-500 mt-1 text-xs">Adicione os VIPs à lista para exportação e impressão.</p></div>
+        <div><h1 className="text-3xl font-bold tracking-tight text-ruby">Gerador de Lista</h1><p className="text-zinc-500 mt-1 text-xs">Adicione os VIPs à lista para exportação e impressão.</p></div>
         <div className="flex gap-3 flex-wrap">
           <Button variant="outline" onClick={() => setIsEventModalOpen(true)} className="flex items-center gap-2 bg-ruby/5 hover:bg-ruby/10 text-ruby border-ruby/20 cursor-pointer font-bold">
             <LinkIcon className="w-4 h-4" />{associatedEvent ? `Associado: ${associatedEvent.title}` : 'Associar a Evento'}
@@ -197,26 +197,37 @@ export default function GerarListaPage() {
         </div>
       </div>
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6 shadow-sm print:hidden">
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="flex-1 border-r border-zinc-100 pr-6">
-            <h2 className="text-lg font-bold text-zinc-900 mb-4 text-sm tracking-tight">Configurar título</h2>
-            <div className="space-y-2.5"><label className="text-xs font-bold text-zinc-500">Título da lista</label><Input placeholder="Ex: Lista VIP - Sábado" value={listTitle} onChange={e => setListTitle(e.target.value)} className="bg-zinc-50 font-bold" /></div>
+        <div className="flex flex-col md:flex-row gap-8">
+          <div className="flex-1 border-r border-zinc-100 pr-8">
+            <h2 className="text-sm font-bold text-zinc-900 mb-6 tracking-tight">Configurar título</h2>
+            <div className="space-y-2.5">
+              <label className="text-xs font-bold text-zinc-500">Título da lista</label>
+              <Input placeholder="Ex: Lista VIP - Sábado" value={listTitle} onChange={e => setListTitle(e.target.value)} className="bg-zinc-50 font-bold h-10" />
+            </div>
           </div>
           <div className="flex-[3]">
-            <h2 className="text-lg font-bold text-zinc-900 mb-4 text-sm tracking-tight">Adicionar venda / convidado</h2>
-            <div className="flex items-end gap-4">
-              <div className="flex-[2] space-y-2.5"><label className="text-xs font-bold text-zinc-500">Nome completo</label><Input placeholder="Digite o nome..." value={nome} onChange={e => setNome(e.target.value)} className="bg-zinc-50 font-bold" onKeyDown={e => e.key === 'Enter' && handleAdd()} /></div>
-              <div className="flex-1 space-y-2.5">
+            <h2 className="text-sm font-bold text-zinc-900 mb-6 tracking-tight">Adicionar venda / convidado</h2>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+              <div className="md:col-span-6 space-y-2.5">
+                <label className="text-xs font-bold text-zinc-500">Nome completo</label>
+                <Input placeholder="Digite o nome..." value={nome} onChange={e => setNome(e.target.value)} className="bg-zinc-50 font-bold h-10" onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+              </div>
+              <div className="md:col-span-3 space-y-2.5">
                 <label className="text-xs font-bold text-zinc-500">Tipo de ingresso</label>
                 <select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={selectedBenefit} onChange={e => setSelectedBenefit(e.target.value)}>
                   <option value="">Ingresso normal</option>
                   {eventBenefits.map(b => <option key={b.id} value={b.id}>{b.nome} - R$ {Number(b.valor).toFixed(2)}</option>)}
                 </select>
               </div>
-              <div className="w-24 space-y-2.5"><label className="text-xs font-bold text-zinc-500">Qtd</label><select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={quantidade} onChange={e => setQuantidade(Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-              <Button onClick={handleAdd} className="bg-ruby hover:bg-ruby/90 text-white h-10 w-10 p-0 shrink-0 cursor-pointer shadow-lg shadow-ruby/20"><Check className="w-5 h-5" /></Button>
+              <div className="md:col-span-2 space-y-2.5">
+                <label className="text-xs font-bold text-zinc-500">Qtd</label>
+                <select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={quantidade} onChange={e => setQuantidade(Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}</select>
+              </div>
+              <div className="md:col-span-1">
+                <Button onClick={handleAdd} className="bg-ruby hover:bg-ruby/90 text-white h-10 w-full p-0 shrink-0 cursor-pointer shadow-lg shadow-ruby/20"><Check className="w-5 h-5" /></Button>
+              </div>
             </div>
-            {error && <div className="flex items-center gap-2 mt-3 text-red-600 text-xs font-bold uppercase"><AlertCircle className="w-4 h-4" />{error}</div>}
+            {error && <div className="flex items-center gap-2 mt-3 text-red-600 text-xs font-bold"><AlertCircle className="w-4 h-4" />{error}</div>}
           </div>
         </div>
       </div>

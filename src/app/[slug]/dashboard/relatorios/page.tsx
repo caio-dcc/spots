@@ -33,15 +33,24 @@ export default function RelatoriosPage() {
   useEffect(() => {
     const init = async () => {
       const slug = params.slug as string;
-      // Buscar teatro pelo slug (limpando o teatro-)
+      if (!slug) return;
+
+      // Buscar teatro pelo slug de forma insensível a maiúsculas/minúsculas
       const { data: theater } = await supabase
         .from('theaters')
         .select('id')
-        .or(`slug.eq.${slug},slug.eq.teatro-${slug}`)
+        .or(`slug.ilike.${slug},slug.ilike.teatro-${slug}`)
         .single();
       
       if (theater) {
         setTheaterId(theater.id);
+      } else {
+        // Fallback: tentar buscar pelo user_roles se o slug falhar
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
+          if (role) setTheaterId(role.theater_id);
+        }
       }
     };
     init();

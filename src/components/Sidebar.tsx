@@ -63,7 +63,7 @@ export function Sidebar() {
   const base = slug ? `/${slug}/dashboard` : '/dashboard';
 
   return (
-    <aside className="w-64 border-r border-zinc-200 bg-white h-screen flex flex-col hidden md:flex font-sansation">
+    <aside className="w-64 border-r border-zinc-200 bg-white h-screen flex flex-col hidden md:flex font-sans">
       {/* Logo */}
       <div className="h-20 flex items-center justify-center px-6 border-b border-zinc-100 gap-3">
         <img src="/favicon.png" alt="SpotMe Logo" className="w-8 h-8 object-contain" />
@@ -120,7 +120,7 @@ export function Sidebar() {
             <ChevronDown className="w-4 h-4 text-zinc-400" />
           </div>
           <div className="mt-1 ml-9 space-y-1">
-            <Link href={`${base}/convidados/gerar-lista`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Gerar Lista</Link>
+            <Link href={`${base}/convidados/gerar-lista`} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Gerador de Lista</Link>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ export function Sidebar() {
       {/* User Dropdown */}
       <div className="p-4 border-t border-zinc-200 relative">
         {isUserMenuOpen && (
-          <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-zinc-200 rounded-lg shadow-lg p-2 animate-in fade-in slide-in-from-bottom-2 z-50">
+          <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-zinc-200 rounded-lg shadow-lg p-2 animate-in fade-in slide-in-from-bottom-2 z-50 font-sans">
             <button 
               onClick={() => window.location.href = "/"}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"

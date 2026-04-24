@@ -72,10 +72,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   if (checking) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-50 font-sansation">
+      <div className="flex h-screen w-full items-center justify-center bg-zinc-50 font-sans">
         <div className="flex flex-col items-center gap-3 text-zinc-500">
           <Loader2 className="w-10 h-10 animate-spin text-ruby" />
-          <p className="text-sm font-medium uppercase tracking-widest">Validando acesso...</p>
+          <p className="text-sm font-medium tracking-tight">Validando acesso...</p>
         </div>
       </div>
     );
@@ -84,7 +84,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!authenticated || !authorized) return null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-zinc-50 font-sansation">
+    <div className="flex h-screen w-full overflow-hidden bg-zinc-50 font-sans">
       {/* Sidebar on the LEFT for standard premium UX */}
       <Sidebar />
 
