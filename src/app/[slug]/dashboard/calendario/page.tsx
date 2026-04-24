@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useParams } from "next/navigation";
 
 export default function CalendarioPage() {
+  const params = useParams();
+  const slug = params.slug as string;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<any[]>([]);
@@ -14,20 +17,23 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     fetchEvents();
-  }, [currentDate]);
+  }, [currentDate, slug]);
 
   const fetchEvents = async () => {
     setLoading(true);
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
     const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
-      const tId = role?.theater_id;
-      if (!tId) return;
+      // Buscar teatro pelo slug
+      const { data: theater } = await supabase
+        .from('theaters')
+        .select('id')
+        .or(`slug.eq.${slug},slug.eq.teatro-${slug}`)
+        .single();
+      
+      if (!theater) return;
 
-      const { data, error } = await supabase.from('events').select('id, title, event_date').eq('theater_id', tId).is('deleted_at', null).gte('event_date', start).lte('event_date', end).order('event_date');
+      const { data, error } = await supabase.from('events').select('id, title, event_date').eq('theater_id', theater.id).is('deleted_at', null).gte('event_date', start).lte('event_date', end).order('event_date');
       if (error) throw error;
       setEvents(data || []);
     } catch (err) { console.error(err); } finally { setLoading(false); }

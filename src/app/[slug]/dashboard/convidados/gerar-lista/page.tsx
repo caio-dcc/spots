@@ -36,17 +36,20 @@ export default function GerarListaPage() {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
-      const tId = role?.theater_id;
-      if (!tId) return;
+      // Buscar teatro pelo slug do params
+      const { data: theater } = await supabase
+        .from('theaters')
+        .select('id')
+        .or(`slug.eq.${slug},slug.eq.teatro-${slug}`)
+        .single();
+      
+      if (!theater) return;
 
-      const { data } = await supabase.from('events').select('id, title, event_date').eq('theater_id', tId).is('deleted_at', null).order('event_date', { ascending: false }).limit(20);
+      const { data } = await supabase.from('events').select('id, title, event_date').eq('theater_id', theater.id).is('deleted_at', null).order('event_date', { ascending: false }).limit(20);
       setDbEvents(data || []);
     };
     fetchEvents();
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     const fetchBenefits = async () => {

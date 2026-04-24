@@ -13,7 +13,11 @@ import { logAction } from "@/lib/audit";
 
 import { toast } from "sonner";
 
+import { useRouter, useParams } from "next/navigation";
+
 export default function ListarEventosPage() {
+  const params = useParams();
+  const slug = params.slug as string;
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -45,13 +49,16 @@ export default function ListarEventosPage() {
       const startDate = `${year}-${monthStr}-01`;
       const endDate = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
-      const theaterId = role?.theater_id;
+      // Buscar teatro pelo slug
+      const { data: theater } = await supabase
+        .from('theaters')
+        .select('id')
+        .or(`slug.eq.${slug},slug.eq.teatro-${slug}`)
+        .single();
+      
+      if (!theater) return;
 
-      let query = supabase.from('events').select('*', { count: 'exact' }).is('deleted_at', null);
-      if (theaterId) query = query.eq('theater_id', theaterId);
+      let query = supabase.from('events').select('*', { count: 'exact' }).is('deleted_at', null).eq('theater_id', theater.id);
       if (search) query = query.ilike('title', `%${search}%`);
       
       // Filtro por mês

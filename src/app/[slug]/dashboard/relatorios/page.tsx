@@ -27,15 +27,24 @@ export default function RelatoriosPage() {
   const [auditData, setAuditData] = useState<any[]>([]);
   const [auditSearch, setAuditSearch] = useState("");
 
+  const params = useParams();
+
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
-      if (role) setTheaterId(role.theater_id);
+      const slug = params.slug as string;
+      // Buscar teatro pelo slug (limpando o teatro-)
+      const { data: theater } = await supabase
+        .from('theaters')
+        .select('id')
+        .or(`slug.eq.${slug},slug.eq.teatro-${slug}`)
+        .single();
+      
+      if (theater) {
+        setTheaterId(theater.id);
+      }
     };
     init();
-  }, []);
+  }, [params.slug]);
 
   useEffect(() => {
     if (!theaterId) return;
