@@ -8,6 +8,7 @@ import { Users, Ticket, Printer, ShieldAlert, Loader2, Search, Calendar, User } 
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useParams } from "next/navigation";
 
 export default function RelatoriosPage() {
   const [activeTab, setActiveTab] = useState<'staff' | 'guests' | 'audit'>('staff');
