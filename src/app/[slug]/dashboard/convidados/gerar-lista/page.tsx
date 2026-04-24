@@ -197,18 +197,24 @@ export default function GerarListaPage() {
         </div>
       </div>
       <div className="bg-white rounded-xl border border-zinc-200 p-6 mb-6 shadow-sm print:hidden">
-        <div className="flex flex-col md:flex-row gap-8">
-          <div className="flex-1 border-r border-zinc-100 pr-8">
-            <h2 className="text-sm font-bold text-zinc-900 mb-6 tracking-tight">Configurar título</h2>
-            <div className="space-y-2.5">
-              <label className="text-xs font-bold text-zinc-500">Título da lista</label>
-              <Input placeholder="Ex: Lista VIP - Sábado" value={listTitle} onChange={e => setListTitle(e.target.value)} className="bg-zinc-50 font-bold h-10" />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
+          {/* Headings */}
+          <div className="md:col-span-3">
+            <h2 className="text-sm font-bold text-zinc-900 tracking-tight">Configurar título</h2>
           </div>
-          <div className="flex-[3]">
-            <h2 className="text-sm font-bold text-zinc-900 mb-6 tracking-tight">Adicionar venda / convidado</h2>
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-              <div className="md:col-span-6 space-y-2.5">
+          <div className="md:col-span-9 border-l border-zinc-100 pl-8">
+            <h2 className="text-sm font-bold text-zinc-900 tracking-tight">Adicionar venda / convidado</h2>
+          </div>
+
+          {/* Inputs Row */}
+          <div className="md:col-span-3 space-y-2.5">
+            <label className="text-xs font-bold text-zinc-500">Título da lista</label>
+            <Input placeholder="Ex: Lista VIP - Sábado" value={listTitle} onChange={e => setListTitle(e.target.value)} className="bg-zinc-50 font-bold h-10" />
+          </div>
+          
+          <div className="md:col-span-9 border-l border-zinc-100 pl-8">
+            <div className="grid grid-cols-1 md:grid-cols-9 gap-4 items-end">
+              <div className="md:col-span-4 space-y-2.5">
                 <label className="text-xs font-bold text-zinc-500">Nome completo</label>
                 <Input placeholder="Digite o nome..." value={nome} onChange={e => setNome(e.target.value)} className="bg-zinc-50 font-bold h-10" onKeyDown={e => e.key === 'Enter' && handleAdd()} />
               </div>
@@ -219,7 +225,7 @@ export default function GerarListaPage() {
                   {eventBenefits.map(b => <option key={b.id} value={b.id}>{b.nome} - R$ {Number(b.valor).toFixed(2)}</option>)}
                 </select>
               </div>
-              <div className="md:col-span-2 space-y-2.5">
+              <div className="md:col-span-1 space-y-2.5">
                 <label className="text-xs font-bold text-zinc-500">Qtd</label>
                 <select className="flex h-10 w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm cursor-pointer font-bold" value={quantidade} onChange={e => setQuantidade(Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}</select>
               </div>
@@ -227,9 +233,9 @@ export default function GerarListaPage() {
                 <Button onClick={handleAdd} className="bg-ruby hover:bg-ruby/90 text-white h-10 w-full p-0 shrink-0 cursor-pointer shadow-lg shadow-ruby/20"><Check className="w-5 h-5" /></Button>
               </div>
             </div>
-            {error && <div className="flex items-center gap-2 mt-3 text-red-600 text-xs font-bold"><AlertCircle className="w-4 h-4" />{error}</div>}
           </div>
         </div>
+        {error && <div className="flex items-center gap-2 mt-3 text-red-600 text-xs font-bold pl-[25%]"><AlertCircle className="w-4 h-4" />{error}</div>}
       </div>
       <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm printable-area">
         <div className="print:hidden p-4 border-b border-zinc-200 bg-zinc-50"><h3 className="font-bold text-zinc-700 text-xs tracking-tight">{listTitle || "Lista de convidados / vendas"}</h3></div>
