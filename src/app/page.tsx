@@ -174,7 +174,7 @@ export default function LoginPage() {
                 <Theater className="h-10 w-10 text-ruby" />
               </div>
               <CardTitle className="text-3xl font-bold">Acessar Sistema</CardTitle>
-              <CardDescription className="text-zinc-600">
+              <CardDescription className="text-zinc-600 mb-[10px]">
                 Insira suas credenciais para gerenciar os eventos.
               </CardDescription>
             </CardHeader>

@@ -38,8 +38,6 @@ export default function ConfiguracoesPage() {
       if (role) {
         setUsername(role.username || user.email || "");
         setIsSudo(role.is_sudo || false);
-        localStorage.setItem('spotme_username', role.username || user.email || "");
-        window.dispatchEvent(new Event('storage'));
 
         // Carregar todos os users do teatro
         setLoadingUsers(true);
@@ -57,8 +55,6 @@ export default function ConfiguracoesPage() {
       if (!user) throw new Error("Não autenticado");
       const { error } = await supabase.from('user_roles').update({ username }).eq('user_id', user.id);
       if (error) throw error;
-      localStorage.setItem('spotme_username', username);
-      window.dispatchEvent(new Event('storage'));
       alert("Nome de usuário atualizado com sucesso!");
     } catch (err: any) { alert(err.message); } finally { setSaving(false); }
   };
@@ -72,7 +68,6 @@ export default function ConfiguracoesPage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('spotme_username');
     localStorage.removeItem('spotme_dark_mode');
     router.push("/");
   };

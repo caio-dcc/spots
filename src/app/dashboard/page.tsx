@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Users, Ticket, DollarSign, Calendar, TrendingUp, Loader2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -14,7 +15,10 @@ export default function DashboardPage() {
     caixa: 0,
     ingressos: 0,
     eventos: 0,
-    funcionarios: 0
+    funcionarios: 0,
+    prevCaixa: 0,
+    prevIngressos: 0,
+    prevEventos: 0
   });
   const [caixaData, setCaixaData] = useState<any[]>([]);
   const [ingressosData, setIngressosData] = useState<any[]>([]);
@@ -23,37 +27,61 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [selectedMonth]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const year = new Date().getFullYear();
-      const startDate = new Date(year, selectedMonth, 1).toISOString();
-      const endDate = new Date(year, selectedMonth + 1, 0, 23, 59, 59).toISOString();
+      
+      // Datas Mês Atual - Construção manual para evitar problemas de fuso horário
+      const yearStr = year.toString();
+      const monthStr = String(selectedMonth + 1).padStart(2, '0');
+      const lastDay = new Date(year, selectedMonth + 1, 0).getDate();
+      const lastDayStr = String(lastDay).padStart(2, '0');
+      
+      const startDate = `${yearStr}-${monthStr}-01`;
+      const endDate = `${yearStr}-${monthStr}-${lastDayStr}`;
+
+      // Datas Mês Anterior
+      const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
+      const prevYear = selectedMonth === 0 ? year - 1 : year;
+      const prevMonthStr = String(prevMonth + 1).padStart(2, '0');
+      const prevLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+      
+      const prevStartDate = `${prevYear}-${prevMonthStr}-01`;
+      const prevEndDate = `${prevYear}-${prevMonthStr}-${String(prevLastDay).padStart(2, '0')}`;
+
+      // 0. Pegar Teatro do Usuário
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: role } = await supabase.from('user_roles').select('theater_id').eq('user_id', user.id).single();
+      const theaterId = role?.theater_id;
 
       // 1. Contar funcionários ativos
-      const { count: funcCount } = await supabase
-        .from('employees')
-        .select('*', { count: 'exact', head: true })
-        .is('deleted_at', null)
-        .eq('status', 'ativo');
+      let funcQuery = supabase.from('employees').select('*', { count: 'exact', head: true }).is('deleted_at', null).eq('status', 'ativo');
+      if (theaterId) funcQuery = funcQuery.eq('theater_id', theaterId);
+      const { count: funcCount } = await funcQuery;
 
-      // 2. Contar eventos do mês
-      const { data: monthEvents, count: eventCount } = await supabase
-        .from('events')
-        .select('id, title, capacity, ticket_price, event_date', { count: 'exact' })
-        .is('deleted_at', null)
-        .gte('event_date', startDate)
-        .lte('event_date', endDate);
+      // 2. Eventos Mês Atual
+      let eventsQuery = supabase.from('events').select('id, title, capacity, ticket_price, event_date', { count: 'exact' }).is('deleted_at', null).gte('event_date', startDate).lte('event_date', endDate);
+      if (theaterId) eventsQuery = eventsQuery.eq('theater_id', theaterId);
+      const { data: monthEvents, count: eventCount } = await eventsQuery;
 
-      // 3. Fluxo de caixa do mês
-      const { data: transactions } = await supabase
-        .from('financial_transactions')
-        .select('amount, type, transaction_date')
-        .gte('transaction_date', startDate)
-        .lte('transaction_date', endDate)
-        .order('transaction_date', { ascending: true });
+      // 3. Eventos Mês Anterior
+      let prevEventsQuery = supabase.from('events').select('id, capacity', { count: 'exact' }).is('deleted_at', null).gte('event_date', prevStartDate).lte('event_date', prevEndDate);
+      if (theaterId) prevEventsQuery = prevEventsQuery.eq('theater_id', theaterId);
+      const { data: prevMonthEvents, count: prevEventCount } = await prevEventsQuery;
 
-      // Calcular caixa total
+      // 4. Fluxo de Caixa Atual
+      let transQuery = supabase.from('financial_transactions').select('amount, type, transaction_date').gte('transaction_date', startDate).lte('transaction_date', endDate);
+      if (theaterId) transQuery = transQuery.eq('theater_id', theaterId);
+      const { data: transactions } = await transQuery.order('transaction_date', { ascending: true });
+
+      // 5. Fluxo de Caixa Anterior
+      let prevTransQuery = supabase.from('financial_transactions').select('amount, type').gte('transaction_date', prevStartDate).lte('transaction_date', prevEndDate);
+      if (theaterId) prevTransQuery = prevTransQuery.eq('theater_id', theaterId);
+      const { data: prevTransactions } = await prevTransQuery;
+
+      // Cálculos Caixa
       let caixa = 0;
       const dailyMap: Record<string, number> = {};
       (transactions || []).forEach(t => {
@@ -63,9 +91,14 @@ export default function DashboardPage() {
         dailyMap[day] = (dailyMap[day] || 0) + val;
       });
 
+      let prevCaixa = 0;
+      (prevTransactions || []).forEach(t => {
+        prevCaixa += t.type === 'INCOME' ? Number(t.amount) : -Number(t.amount);
+      });
+
       const caixaChartData = Object.entries(dailyMap).map(([dia, valor]) => ({ dia, valor }));
 
-      // 4. Ingressos (capacidade total dos eventos do mês)
+      // Cálculos Visitas (Capacidade)
       let totalIngressos = 0;
       const ingressosChartData: any[] = [];
       (monthEvents || []).forEach(e => {
@@ -73,20 +106,34 @@ export default function DashboardPage() {
         ingressosChartData.push({ nome: e.title?.substring(0, 15), quantidade: e.capacity });
       });
 
+      let prevTotalIngressos = 0;
+      (prevMonthEvents || []).forEach(e => { prevTotalIngressos += e.capacity; });
+
       setStats({
         caixa,
         ingressos: totalIngressos,
         eventos: eventCount || 0,
-        funcionarios: funcCount || 0
+        funcionarios: funcCount || 0,
+        prevCaixa,
+        prevIngressos: prevTotalIngressos,
+        prevEventos: prevEventCount || 0
       });
+      
+      console.log("Dashboard Debug:", {
+        period: `${startDate} to ${endDate}`,
+        theaterId,
+        eventCount
+      });
+
       setCaixaData(caixaChartData);
       setIngressosData(ingressosChartData);
     } catch (error) {
-      console.error("Erro ao carregar dashboard:", error);
+      console.error("Erro no dashboard:", error);
+      toast.error("Erro ao carregar dados do dashboard.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMonth]);
 
   const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -94,7 +141,7 @@ export default function DashboardPage() {
     <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Visão Geral</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-ruby">Visão Geral</h1>
           <p className="text-zinc-500 mt-1">Bem-vindo ao SpotMe. Acompanhe os indicadores do seu teatro.</p>
         </div>
         
@@ -122,16 +169,26 @@ export default function DashboardPage() {
           <div className="text-3xl font-bold text-zinc-900">
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : `R$ ${stats.caixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           </div>
+          {!loading && (
+            <p className="text-xs text-zinc-400 mt-2">
+              Anterior: R$ {stats.prevCaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="font-semibold text-zinc-500 text-sm">Capacidade Total</h3>
+            <h3 className="font-semibold text-zinc-500 text-sm">Visitas Totais no Mês</h3>
             <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Ticket className="w-5 h-5" /></div>
           </div>
           <div className="text-3xl font-bold text-zinc-900">
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.ingressos}
           </div>
+          {!loading && (
+            <p className="text-xs text-zinc-400 mt-2">
+              Anterior: {stats.prevIngressos}
+            </p>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
@@ -142,6 +199,11 @@ export default function DashboardPage() {
           <div className="text-3xl font-bold text-zinc-900">
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.eventos}
           </div>
+          {!loading && (
+            <p className="text-xs text-zinc-400 mt-2">
+              Anterior: {stats.prevEventos}
+            </p>
+          )}
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
@@ -152,6 +214,7 @@ export default function DashboardPage() {
           <div className="text-3xl font-bold text-zinc-900">
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : stats.funcionarios}
           </div>
+          <p className="text-xs text-zinc-400 mt-2">Colaboradores ativos</p>
         </div>
       </div>
 
