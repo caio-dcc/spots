@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Felipa } from "next/font/google";
+import { Toaster } from "sonner";
+import Script from "next/script";
+
+const felipa = Felipa({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-felipa",
+});
 
 export const metadata: Metadata = {
-  title: "SpotMe — Gestão Inteligente de Teatros",
-  description: "Plataforma SaaS para gestão de eventos, equipe, bilheteria e convidados VIP de teatros.",
+  title: "Spotlight — Gestão Inteligente de Eventos",
+  description: "Plataforma SaaS para gestão de eventos, equipe, bilheteria e convidados VIP de eventos.",
   icons: {
-    icon: "/favicon.png",
+    icon: "/icon.png",
   },
 };
-
-import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -23,20 +30,22 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            try {
-              const theme = localStorage.getItem('spotme_dark_mode');
-              if (theme === 'true') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-              } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-              }
-            } catch (e) {}
-          })();
-        ` }} />
+        <Script id="theme-loader" strategy="beforeInteractive">
+          {`
+            (function() {
+              try {
+                const theme = localStorage.getItem('spotme_dark_mode');
+                if (theme === 'true') {
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                  document.documentElement.setAttribute('data-theme', 'light');
+                }
+              } catch (e) {}
+            })();
+          `}
+        </Script>
       </head>
-      <body className="min-h-full flex flex-col font-sans">
+      <body className={`${felipa.variable} min-h-full flex flex-col font-sans`}>
         {children}
         <Toaster position="top-right" richColors closeButton />
       </body>

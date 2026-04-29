@@ -186,6 +186,11 @@ body {
 .bg-white {
   background-color: var(--spotme-card) !important;
 }
+@media (min-width: 768px) {
+  .md\:bg-white {
+    background-color: var(--spotme-card) !important;
+  }
+}
 .bg-zinc-50 {
   background-color: var(--spotme-input) !important;
 }
@@ -199,6 +204,11 @@ body {
 /* Textos */
 .text-zinc-900 {
   color: var(--spotme-text-main) !important;
+}
+@media (min-width: 768px) {
+  .md\:text-zinc-900 {
+    color: var(--spotme-text-main) !important;
+  }
 }
 .text-zinc-800, .text-zinc-700, .text-zinc-600, .text-zinc-500, .text-zinc-400 {
   color: var(--spotme-text-muted) !important;
@@ -219,4 +229,22 @@ button.bg-zinc-900 {
 }
 button.bg-zinc-900:hover {
   opacity: 0.9 !important;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 1.5s linear infinite;
+}
+
+/* Espaçamento padrão entre label e input */
+label + input, 
+label + select, 
+label + textarea,
+label + div[class*="relative"] {
+  margin-top: 10px !important;
 }

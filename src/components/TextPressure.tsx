@@ -5,9 +5,10 @@ import React, { useEffect, useRef, useState } from "react";
 interface TextPressureProps {
   text?: string;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export function TextPressure({ text = "SpotMe", className = "" }: TextPressureProps) {
+export function TextPressure({ text = "MySpot", className = "", style }: TextPressureProps) {
   const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
   const containerRef = useRef<HTMLDivElement>(null);
   const charsRef = useRef<(HTMLSpanElement | null)[]>([]);
@@ -37,7 +38,11 @@ export function TextPressure({ text = "SpotMe", className = "" }: TextPressurePr
   }, []);
 
   return (
-    <div ref={containerRef} className={`flex select-none items-center justify-center ${className}`}>
+    <div 
+      ref={containerRef} 
+      className={`flex select-none items-center justify-center ${className}`}
+      style={style}
+    >
       {text.split("").map((char, i) => {
         let weight = 700; // default bold for title
         
