@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { logAction } from "@/lib/audit";
 
 interface Beneficio { id: string; nome: string; valor_mask: string; quantidade: string; }
-interface FuncionarioAssociado { id: string; nome: string; cargo: string; temDiaria: boolean; valorDiaria: number | ""; horarioChegada: string; }
+interface FuncionarioAssociado { id: string; nome: string; cargo: string; temDiaria: boolean; valorDiaria: number | ""; horarioChegada: string; eh_fixo: boolean; salario?: number; }
 
 export default function CadastrarEventoPage() {
   const router = useRouter();
