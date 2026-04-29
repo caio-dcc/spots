@@ -113,22 +113,7 @@ export default function ListarEventosPage() {
   useEffect(() => { const t = setTimeout(() => fetchEventos(), 400); return () => clearTimeout(t); }, [fetchEventos]);
 
   const handleEdit = (event: any) => {
-    const date = new Date(event.event_date);
-    const dateString = date.toISOString().split('T')[0];
-    
-    setEditingEvent({ 
-      ...event, 
-      event_date_input: dateString,
-      ticket_price_mask: maskCurrency((event.ticket_price * 100).toString()),
-      applause_level: event.applause_level || 0,
-      laughter_level: event.laughter_level || 0,
-      artistas_data: Array.isArray(event.artistas) ? event.artistas.map((a: any) => ({
-        name: typeof a === 'string' ? a : a.name,
-        fee: typeof a === 'string' ? "0" : maskCurrency((a.fee * 100).toString())
-      })) : []
-    });
-    setErrors([]);
-    setIsModalOpen(true);
+    router.push(`/${slug}/dashboard/eventos/editar/${event.id}`);
   };
 
   const handleUpdate = async () => {
@@ -582,223 +567,7 @@ export default function ListarEventosPage() {
         </div>
       </div>
 
-      {/* Edit Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="!w-[95vw] sm:!w-[80vw] !h-[85vh] sm:!h-[70vh] sm:max-w-none flex flex-col bg-white border-0 shadow-2xl rounded-3xl overflow-hidden p-0">
-          <div className="bg-ruby/5 p-6 border-b border-ruby/10 shrink-0">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-zinc-900 flex items-center gap-2">
-                <Edit2 className="w-6 h-6 text-ruby" />
-                Editar Evento
-              </DialogTitle>
-            </DialogHeader>
-          </div>
 
-          <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="sm:col-span-3 space-y-2">
-                <Label className="text-zinc-700 font-bold">Nome do Evento</Label>
-                <Input 
-                  value={editingEvent?.title || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, title: e.target.value})}
-                  className={`h-12 rounded-xl bg-zinc-50/50 border-zinc-200 ${getError('title') ? "border-red-500" : "focus:ring-ruby"}`}
-                />
-                {getError('title') && <p className="text-xs text-red-500 mt-1">{getError('title')}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Data</Label>
-                <Input 
-                  type="date"
-                  value={editingEvent?.event_date_input || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, event_date_input: e.target.value})}
-                  className={`h-12 rounded-xl bg-zinc-50/50 border-zinc-200 max-w-[200px] ${getError('eventDate') ? "border-red-500" : "focus:ring-ruby"}`}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Horário</Label>
-                <Input 
-                  type="time"
-                  value={editingEvent?.event_time || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, event_time: e.target.value})}
-                  className="h-12 rounded-xl bg-zinc-50/50 border-zinc-200 max-w-[200px] focus:ring-ruby"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Tipo de Evento</Label>
-                <select 
-                  className="flex h-12 w-full max-w-[200px] rounded-xl border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-sm font-bold cursor-pointer focus:ring-2 focus:ring-ruby outline-none"
-                  value={editingEvent?.category || ""}
-                  onChange={(e) => setEditingEvent({...editingEvent, category: e.target.value})}
-                >
-                  <option value="">Selecione...</option>
-                  <option value="Teatro">Teatro</option>
-                  <option value="Show">Show</option>
-                  <option value="Palestra">Palestra</option>
-                  <option value="Workshop">Workshop</option>
-                  <option value="Evento Corporativo">Evento Corporativo</option>
-                  <option value="Outros">Outros</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Capacidade</Label>
-                <Input 
-                  type="number"
-                  value={editingEvent?.capacity || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, capacity: e.target.value})}
-                  className={`h-12 rounded-xl bg-zinc-50/50 border-zinc-200 max-w-[200px] ${getError('capacity') ? "border-red-500" : "focus:ring-ruby"}`}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Preço (R$)</Label>
-                <Input 
-                  value={editingEvent?.ticket_price_mask || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, ticket_price_mask: maskCurrency(e.target.value)})}
-                  className="h-12 rounded-xl bg-zinc-50/50 border-zinc-200 max-w-[200px] focus:ring-ruby font-mono font-bold"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Produtor</Label>
-                <Input 
-                  value={editingEvent?.produtor || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, produtor: e.target.value})}
-                  className="h-12 rounded-xl bg-zinc-50/50 border-zinc-200 max-w-[200px] focus:ring-ruby"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Aplausos (Palmas)</Label>
-                <div className="flex items-center gap-2 bg-zinc-50/50 rounded-xl border border-zinc-200 px-3 h-12 max-w-[200px]">
-                  <span className="text-ruby">👏</span>
-                  <Input 
-                    type="number"
-                    value={editingEvent?.applause_level || 0} 
-                    onChange={(e) => setEditingEvent({...editingEvent, applause_level: e.target.value})}
-                    className="border-none bg-transparent focus:ring-0 text-center font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-zinc-700 font-bold">Risadas</Label>
-                <div className="flex items-center gap-2 bg-zinc-50/50 rounded-xl border border-zinc-200 px-3 h-12 max-w-[200px]">
-                  <span className="text-ruby">😂</span>
-                  <Input 
-                    type="number"
-                    value={editingEvent?.laughter_level || 0} 
-                    onChange={(e) => setEditingEvent({...editingEvent, laughter_level: e.target.value})}
-                    className="border-none bg-transparent focus:ring-0 text-center font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 space-y-4">
-                <div className="flex justify-between items-center">
-                  <Label className="text-zinc-700 font-bold">Artistas & Cachês</Label>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      const current = editingEvent.artistas_data || [];
-                      setEditingEvent({
-                        ...editingEvent,
-                        artistas_data: [...current, { name: "", fee: "0" }]
-                      });
-                    }}
-                    className="h-8 rounded-lg border-ruby/20 text-ruby hover:bg-ruby/5"
-                  >
-                    <Plus className="w-3 h-3 mr-1" /> Adicionar Artista
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {editingEvent && (editingEvent.artistas_data || []).map((a: any, idx: number) => (
-                    <div key={idx} className="flex gap-3 items-center bg-zinc-50 p-3 rounded-xl border border-zinc-100 animate-in fade-in">
-                      <Input 
-                        placeholder="Nome do Artista" 
-                        value={a.name} 
-                        onChange={e => {
-                          const newList = [...editingEvent.artistas_data];
-                          newList[idx].name = e.target.value;
-                          setEditingEvent({...editingEvent, artistas_data: newList});
-                        }}
-                        className="bg-white flex-1"
-                      />
-                      <div className="flex items-center bg-white rounded-md border border-zinc-200 px-2 w-32">
-                        <span className="text-[10px] font-bold text-zinc-400">R$</span>
-                        <Input 
-                          placeholder="0,00" 
-                          value={a.fee} 
-                          onChange={e => {
-                            const newList = [...editingEvent.artistas_data];
-                            newList[idx].fee = maskCurrency(e.target.value);
-                            setEditingEvent({...editingEvent, artistas_data: newList});
-                          }}
-                          className="border-none h-8 text-xs font-mono font-bold focus:ring-0 text-right px-1"
-                        />
-                      </div>
-                      <button 
-                        onClick={() => {
-                          const newList = editingEvent.artistas_data.filter((_: any, i: number) => i !== idx);
-                          setEditingEvent({...editingEvent, artistas_data: newList});
-                        }}
-                        className="text-zinc-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {editingEvent && (editingEvent.artistas_data || []).length === 0 && (
-                    <p className="text-xs text-zinc-400 italic text-center py-2">Nenhum artista cadastrado.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="sm:col-span-2 space-y-2">
-                <Label className="text-zinc-700 font-medium">Produtor Responsável</Label>
-                <Input 
-                  value={editingEvent?.produtor || ""} 
-                  onChange={(e) => setEditingEvent({...editingEvent, produtor: e.target.value})}
-                  className="focus:ring-ruby"
-                />
-              </div>
-
-              <div className="sm:col-span-2 space-y-2">
-                <Label className="text-zinc-700 font-medium">Descrição / Release</Label>
-                <textarea 
-                  className="w-full min-h-[100px] flex rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ruby"
-                  value={editingEvent?.description || ""}
-                  onChange={(e) => setEditingEvent({...editingEvent, description: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="p-8 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between sm:justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsModalOpen(false)}
-              className="text-zinc-500 hover:text-zinc-900 cursor-pointer"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleUpdate} 
-              disabled={saving}
-              className="bg-ruby hover:bg-ruby-dark text-white rounded-full px-8 py-2 font-bold shadow-lg shadow-ruby/20 transition-all active:scale-95 cursor-pointer"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Salvar Alterações
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
@@ -836,7 +605,7 @@ export default function ListarEventosPage() {
       </Dialog>
       {/* Guest List Modal */}
       <Dialog open={isGuestListOpen} onOpenChange={setIsGuestListOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-white rounded-2xl">
+        <DialogContent className="sm:max-w-[840px] p-0 overflow-hidden bg-white rounded-2xl">
           <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-zinc-900 flex items-center gap-2">
@@ -976,7 +745,7 @@ export default function ListarEventosPage() {
 
       {/* Final Report Modal: Finis coronat opus */}
       <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
-        <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl rounded-[2.5rem] p-10 font-sans">
+        <DialogContent className="max-w-4xl bg-white border-0 shadow-2xl rounded-[2.5rem] p-10 font-sans">
           <div className="flex flex-col items-center text-center mb-8">
             <h1 className="text-4xl font-black text-ruby mb-2">Finis coronat opus</h1>
             <p className="text-zinc-400 font-black uppercase tracking-[0.3em] text-[10px]">Uma salva de palmas</p>

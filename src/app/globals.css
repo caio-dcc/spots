@@ -49,6 +49,20 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --color-ruby: #9B111E;
   --color-ruby-foreground: #FFFFFF;
+
+  /* Login-1 Variables */
+  --color-bg: #101214;
+  --color-surface: #161A1D;
+  --color-muted-surface: #1D2125;
+  --color-border: #2C333A;
+  --color-text-secondary: #596773;
+  --color-text-primary: #C7D1DB;
+  --color-heading: #DEE4EA;
+  --spacing-6: 1.5rem;
+  --rounded-lg: 0.5rem;
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  --color-text-primary-rgb: 199, 209, 219;
+  --color-bg-2: #C7D1DB;
 }
 
 :root {
@@ -84,6 +98,16 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Override for login-1 light mode (optional, but requested base vars) */
+  --color-bg: #101214;
+  --color-surface: #161A1D;
+  --color-muted-surface: #1D2125;
+  --color-border: #2C333A;
+  --color-text-secondary: #596773;
+  --color-text-primary: #C7D1DB;
+  --color-heading: #DEE4EA;
+  --color-bg-2: #C7D1DB;
 }
 
 .dark {
@@ -118,6 +142,17 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Login-1 dark mode vars */
+  --color-bg: #101214;
+  --color-surface: #161A1D;
+  --color-muted-surface: #1D2125;
+  --color-border: #2C333A;
+  --color-text-secondary: #596773;
+  --color-text-primary: #C7D1DB;
+  --color-heading: #DEE4EA;
+  --color-bg-2: #C7D1DB;
+  --color-text-primary-rgb: 199, 209, 219;
 }
 
 @layer base {
@@ -177,11 +212,6 @@
 }
 
 /* Injeção forçada das variáveis sobre as classes utilitárias que já estão no HTML */
-body {
-  background-color: var(--spotme-bg) !important;
-  color: var(--spotme-text-main) !important;
-}
-
 /* Fundos */
 .bg-white {
   background-color: var(--spotme-card) !important;

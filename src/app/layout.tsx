@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Felipa } from "next/font/google";
 import { Toaster } from "sonner";
-import Script from "next/script";
+import { ModuleNav } from "@/components/ModuleNav";
+import { MantineProvider, AppShell, AppShellHeader, AppShellMain, createTheme } from '@mantine/core';
+import '@mantine/core/styles.css';
+
+const theme = createTheme({});
+
 
 const felipa = Felipa({
   weight: "400",
@@ -26,27 +31,21 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className="h-full antialiased"
+      className="h-full antialiased dark"
+      data-theme="dark"
       suppressHydrationWarning
     >
-      <head>
-        <Script id="theme-loader" strategy="beforeInteractive">
-          {`
-            (function() {
-              try {
-                const theme = localStorage.getItem('spotme_dark_mode');
-                if (theme === 'true') {
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                } else {
-                  document.documentElement.setAttribute('data-theme', 'light');
-                }
-              } catch (e) {}
-            })();
-          `}
-        </Script>
-      </head>
       <body className={`${felipa.variable} min-h-full flex flex-col font-sans`}>
-        {children}
+        <MantineProvider theme={theme} defaultColorScheme="dark">
+          <AppShell bg="black" padding={0}>
+            <div className="w-full bg-black">
+              <ModuleNav />
+            </div>
+            <AppShellMain bg="black" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+              {children}
+            </AppShellMain>
+          </AppShell>
+        </MantineProvider>
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>

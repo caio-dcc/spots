@@ -148,6 +148,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <ChevronDown className="w-4 h-4 text-zinc-400" />
           </div>
           <div className="mt-1 ml-9 space-y-1">
+            <Link href={`${base}/convidados/gerar-lista`} onClick={onClose} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Gerar Lista</Link>
             <Link href={`${base}/convidados/checkin`} onClick={onClose} className="block px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-ruby hover:bg-ruby/5 font-medium">- Check-in Online</Link>
           </div>
         </div>
