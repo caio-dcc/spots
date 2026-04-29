@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import LoginComponent from "@/components/ui/LoginComponent";
 import { Footer } from "@/components/Footer";
-import { KillExcelSection } from "@/components/KillExcelSection";
+import { PricingSection } from "@/components/PricingSection";
 
 export default function SpotlightShowPage() {
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,33 @@ export default function SpotlightShowPage() {
         />
       </main>
 
-      <KillExcelSection />
+      <PricingSection 
+        moduleName="Show"
+        plans={[
+          {
+            name: "Starter",
+            price: "499",
+            description: "Ideal para teatros boutique e espaços intimistas.",
+            accentColor: "#9B111E",
+            features: ["Até 5 eventos/mês", "Bilheteria Integrada", "Controle de Acesso Base", "Suporte em horário comercial"]
+          },
+          {
+            name: "Professional",
+            price: "999",
+            description: "Para casas de espetáculo com agenda recorrente.",
+            accentColor: "#9B111E",
+            isPopular: true,
+            features: ["Eventos Ilimitados", "Analytics Avançado", "Gestão de Lugares Marcados", "Checkout Customizado", "API de Integração"]
+          },
+          {
+            name: "Enterprise",
+            price: "1.999",
+            description: "Solução completa para arenas e redes de teatros.",
+            accentColor: "#9B111E",
+            features: ["Múltiplas Unidades", "Suporte 24/7 Dedicado", "Infraestrutura Dedicada", "Relatórios Gerenciais Personalizados", "Consultoria de Operação"]
+          }
+        ]}
+      />
       <Footer accentColor="#9B111E" />
     </div>
   );

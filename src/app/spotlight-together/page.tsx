@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import LoginComponent from "@/components/ui/LoginComponent";
 import { Footer } from "@/components/Footer";
-import { KillExcelSection } from "@/components/KillExcelSection";
+import { PricingSection } from "@/components/PricingSection";
 
 export default function SpotlightTogetherPage() {
   const [loading, setLoading] = useState(false);
@@ -68,8 +68,34 @@ export default function SpotlightTogetherPage() {
         />
       </main>
 
-      <KillExcelSection />
+      <PricingSection 
+        moduleName="Together"
+        plans={[
+          {
+            name: "Light",
+            price: "299",
+            description: "Para pequenos eventos e listas de convidados.",
+            accentColor: "#4F46E5",
+            features: ["Até 300 Convidados", "Link de Convite Único", "Check-in via App", "Relatório de Presença"]
+          },
+          {
+            name: "Growth",
+            price: "599",
+            description: "Aumente sua escala com monetização integrada.",
+            accentColor: "#4F46E5",
+            isPopular: true,
+            features: ["Até 1500 Convidados", "Venda de Convites (Pix)", "Gestão de Comissários", "QR Code Dinâmico", "Dashboard de Vendas"]
+          },
+          {
+            name: "Elite",
+            price: "1.299",
+            description: "Gestão VIP para grandes produções e festivais.",
+            accentColor: "#4F46E5",
+            features: ["Convidados Ilimitados", "Customização de Checkout", "Concierge Exclusivo", "Integração CRM", "Múltiplas Listas de Acesso"]
+          }
+        ]}
+      />
       <Footer accentColor="#4F46E5" />
     </div>
   );
- }
+}

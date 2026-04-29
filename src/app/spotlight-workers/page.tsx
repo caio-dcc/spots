@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import LoginComponent from "@/components/ui/LoginComponent";
 import { Footer } from "@/components/Footer";
-import { KillExcelSection } from "@/components/KillExcelSection";
+import { PricingSection } from "@/components/PricingSection";
 
 export default function SpotlightWorkersPage() {
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,33 @@ export default function SpotlightWorkersPage() {
         />
       </main>
 
-      <KillExcelSection />
+      <PricingSection 
+        moduleName="Workers"
+        plans={[
+          {
+            name: "Basic",
+            price: "199",
+            description: "Para equipes pequenas e operação simplificada.",
+            accentColor: "#F59E0B",
+            features: ["Até 15 Colaboradores", "Escala Digital", "Ponto via Geolocalização", "Relatório de Horas"]
+          },
+          {
+            name: "Team",
+            price: "399",
+            description: "Otimize sua equipe com automação.",
+            accentColor: "#F59E0B",
+            isPopular: true,
+            features: ["Até 50 Colaboradores", "Escalas Inteligentes", "Portal do Colaborador", "Gestão de Cachês", "Histórico de Performance"]
+          },
+          {
+            name: "Business",
+            price: "799",
+            description: "Escalabilidade para grandes staffs e agências.",
+            accentColor: "#F59E0B",
+            features: ["Colaboradores Ilimitados", "Pagamentos Automatizados", "Controle de Múltiplas Equipes", "Analytics de Produtividade", "Suporte Prioritário"]
+          }
+        ]}
+      />
       <Footer accentColor="#F59E0B" />
     </div>
   );

@@ -344,6 +344,7 @@ export default function EditarFuncionarioPage() {
           </section>
         </div>
       </div>
+      </div>
     </div>
   );
 }
