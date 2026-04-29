@@ -184,7 +184,8 @@ export default function DashboardPage() {
       const dailyMap: Record<string, number> = {};
       let currentIncome = 0;
       guestsCurrent?.forEach((sale: any) => {
-        let price = sale.events?.ticket_price || 0;
+        const ev = Array.isArray(sale.events) ? sale.events[0] : (sale.events as any);
+        let price = ev?.ticket_price || 0;
         if (sale.benefit_id) {
           const b = benefits?.find((bx: any) => bx.id === sale.benefit_id);
           if (b) price = b.valor;
@@ -205,7 +206,8 @@ export default function DashboardPage() {
 
       let prevIncome = 0;
       guestsPrev?.forEach((sale: any) => {
-        let price = sale.events?.ticket_price || 0;
+        const ev = Array.isArray(sale.events) ? sale.events[0] : (sale.events as any);
+        let price = ev?.ticket_price || 0;
         if (sale.benefit_id) {
           const b = benefits?.find((bx: any) => bx.id === sale.benefit_id);
           if (b) price = b.valor;

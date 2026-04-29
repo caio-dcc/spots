@@ -189,11 +189,14 @@ export default function ListarFuncionariosPage() {
       if (error) throw error;
 
       const totalEarned = data?.reduce((acc, curr) => acc + (Number(curr.valor_diaria) || 0), 0) || 0;
-      const events = data?.map(d => ({
-        title: d.events?.title,
-        date: d.events?.event_date,
-        earned: d.valor_diaria
-      })) || [];
+      const events = data?.map(d => {
+        const ev = Array.isArray(d.events) ? d.events[0] : (d.events as any);
+        return {
+          title: ev?.title,
+          date: ev?.event_date,
+          earned: d.valor_diaria
+        };
+      }) || [];
 
       setInspectStats({
         eventCount: data?.length || 0,

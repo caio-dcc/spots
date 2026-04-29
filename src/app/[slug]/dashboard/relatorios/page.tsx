@@ -205,12 +205,12 @@ export default function RelatoriosPage() {
                       <div className="flex-1">
                         <div className="flex justify-between items-start mb-2">
                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                             {s.events?.event_date ? new Date(s.events.event_date).toLocaleDateString('pt-BR') : '—'}
+                             {(Array.isArray(s.events) ? s.events[0]?.event_date : (s.events as any)?.event_date) ? new Date(Array.isArray(s.events) ? s.events[0].event_date : (s.events as any).event_date).toLocaleDateString('pt-BR') : '—'}
                            </span>
                         </div>
                         
                         <h3 className="text-2xl font-black text-ruby leading-none mb-1 truncate pr-8">
-                          {s.events?.title || 'Evento sem título'}
+                          {(Array.isArray(s.events) ? s.events[0]?.title : (s.events as any)?.title) || 'Evento sem título'}
                         </h3>
                         <p className="text-sm font-bold text-zinc-600 mb-6 italic">
                           DIÁRIA: {s.valor_diaria ? `R$ ${Number(s.valor_diaria).toFixed(2)}` : '—'}
@@ -244,8 +244,8 @@ export default function RelatoriosPage() {
                     <TableRow><TableCell colSpan={3} className="text-center py-12 text-zinc-400 font-bold text-sm">Nenhum evento encontrado para este funcionário.</TableCell></TableRow>
                   ) : employeeHistory.map(s => (
                     <TableRow key={s.id} className="not-italic hover:bg-zinc-50 transition-colors">
-                      <TableCell className="font-bold text-ruby text-base pl-8">{s.events?.title || 'Sem título'}</TableCell>
-                      <TableCell className="font-bold text-zinc-600">{s.events?.event_date ? new Date(s.events.event_date).toLocaleDateString('pt-BR') : '—'}</TableCell>
+                      <TableCell className="font-bold text-ruby text-base pl-8">{(Array.isArray(s.events) ? s.events[0]?.title : (s.events as any)?.title) || 'Sem título'}</TableCell>
+                      <TableCell className="font-bold text-zinc-600">{(Array.isArray(s.events) ? s.events[0]?.event_date : (s.events as any)?.event_date) ? new Date(Array.isArray(s.events) ? s.events[0].event_date : (s.events as any).event_date).toLocaleDateString('pt-BR') : '—'}</TableCell>
                       <TableCell className="font-bold text-zinc-900 text-right pr-8">{s.valor_diaria ? `R$ ${Number(s.valor_diaria).toFixed(2)}` : '—'}</TableCell>
                     </TableRow>
                   ))}
