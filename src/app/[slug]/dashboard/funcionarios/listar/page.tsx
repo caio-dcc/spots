@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { maskCPF, maskPhone, validateEmployee, ValidationError } from "@/lib/mas
 import { logAction } from "@/lib/audit";
 
 export default function ListarFuncionariosPage() {
+  const router = useRouter();
+  const params = useParams();
   const [data, setData] = useState<any[]>([]);
   // ... (rest of states)
   const [loading, setLoading] = useState(true);
