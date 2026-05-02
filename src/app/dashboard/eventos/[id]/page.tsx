@@ -178,8 +178,8 @@ export default function EventDetailsPage() {
   const totalExtras = event?.extra_expenses?.reduce((acc: number, e: any) => acc + safeParse(e.value || e.valor), 0) || 0;
   
   const totalDespesasVariaveis = totalCaches + totalDiarias + totalExtras;
-  const taxaUso = totalReceita * 0.05;
   const lucroPrejuizoEvento = totalReceita - totalDespesasVariaveis;
+  const taxaUso = lucroPrejuizoEvento > 0 ? lucroPrejuizoEvento * 0.10 : 0; // 10% sobre o lucro (Modelo de Performance)
   const resultadoFinalComTaxa = lucroPrejuizoEvento - taxaUso;
 
   // Custo dos funcionários efetivados (salário mensal)
