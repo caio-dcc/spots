@@ -255,9 +255,8 @@ export default function ListarEventosPage() {
     const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
     const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
     
-    const profitBeforeFee = revenue - staffCosts - extraExpenses - artistCaches;
-    const devFee = profitBeforeFee > 0 ? profitBeforeFee * 0.10 : 0;
-    const profit = profitBeforeFee - devFee;
+    const devFee = revenue * 0.025; // 2.5% sobre receita
+    const profit = revenue - staffCosts - extraExpenses - artistCaches - devFee;
     
     const financialData = [
       { Informação: 'Evento', Valor: activeEvent.title },
@@ -267,7 +266,7 @@ export default function ListarEventosPage() {
       { Informação: 'Cachês Artistas (-)', Valor: `R$ ${artistCaches.toFixed(2)}` },
       { Informação: 'Diárias Staff (-)', Valor: `R$ ${staffCosts.toFixed(2)}` },
       { Informação: 'Despesas Extras (-)', Valor: `R$ ${extraExpenses.toFixed(2)}` },
-      { Informação: 'Taxa de Performance 10% (-)', Valor: `R$ ${devFee.toFixed(2)}` },
+      { Informação: 'Taxa de Serviço Spotlight 2.5% (-)', Valor: `R$ ${devFee.toFixed(2)}` },
       { Informação: 'LUCRO LÍQUIDO (=)', Valor: `R$ ${profit.toFixed(2)}` },
       { Informação: '', Valor: '' },
       { Informação: 'DETALHES DE DESPESAS', Valor: '' },
@@ -315,9 +314,8 @@ export default function ListarEventosPage() {
       const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
       const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
       
-      const profitBeforeFee = revenue - staffCosts - extraExpenses - artistCaches;
-      const devFee = profitBeforeFee > 0 ? profitBeforeFee * 0.10 : 0;
-      const profit = profitBeforeFee - devFee;
+      const devFee = revenue * 0.025;
+      const profit = revenue - staffCosts - extraExpenses - artistCaches - devFee;
 
       doc.setFontSize(20);
       doc.text("Relatório do Evento", 14, 22);
@@ -330,7 +328,7 @@ export default function ListarEventosPage() {
       doc.text(`(-) Cachês de Atrações: R$ ${artistCaches.toFixed(2)}`, 14, 54);
       doc.text(`(-) Diárias de Staff: R$ ${staffCosts.toFixed(2)}`, 14, 60);
       doc.text(`(-) Despesas Adicionais: R$ ${extraExpenses.toFixed(2)}`, 14, 66);
-      doc.text(`(-) Taxa de Performance Spotlight (10%): R$ ${devFee.toFixed(2)}`, 14, 72);
+      doc.text(`(-) Taxa de Serviço Spotlight (2.5%): R$ ${devFee.toFixed(2)}`, 14, 72);
       doc.setFont('helvetica', 'bold');
       doc.text(`(=) LUCRO LÍQUIDO: R$ ${profit.toFixed(2)}`, 14, 82);
       doc.setFont('helvetica', 'normal');
@@ -407,7 +405,7 @@ export default function ListarEventosPage() {
       
       const invoiceData = [
         ['Serviço', 'Cálculo', 'Valor'],
-        ['Taxa de Performance Spotlight', `10% sobre lucro de R$ ${profitBeforeFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `R$ ${devFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
+        ['Taxa de Serviço Spotlight', `2,5% sobre receita bruta de R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `R$ ${devFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`],
         ['', 'TOTAL A PAGAR', `R$ ${devFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]
       ];
       
@@ -415,7 +413,7 @@ export default function ListarEventosPage() {
         startY: 110,
         head: [['Serviço', 'Cálculo', 'Valor']],
         body: [
-          ['Taxa de Performance Spotlight', `10% sobre lucro de R$ ${profitBeforeFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `R$ ${devFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]
+          ['Taxa de Serviço Spotlight', `2,5% sobre receita bruta de R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `R$ ${devFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]
         ],
         foot: [['', 'TOTAL A PAGAR', `R$ ${devFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`]],
         theme: 'grid',
@@ -978,24 +976,18 @@ export default function ListarEventosPage() {
                   ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
                   reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
                   reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) >= 0 ? 'text-green-600' : 'text-ruby'
+                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
+                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * 0.025) >= 0 ? 'text-green-600' : 'text-ruby'
                 }`}>
                   R$ {(
-                  ((((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
+                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
                   reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
                   reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) > 0) ?
-                  ((((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                  reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                  reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) * 0.90) :
-                  (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                  reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                  reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0))
+                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
+                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * 0.025)
                   ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-[10px] font-bold text-zinc-400 mt-1 uppercase">Já descontando despesas e performance (10%)</p>
+                <p className="text-[10px] font-bold text-zinc-400 mt-1 uppercase">Já descontando despesas e taxas (2.5%)</p>
               </div>
             </div>
 
@@ -1017,8 +1009,8 @@ export default function ListarEventosPage() {
                       <span className="text-ruby font-bold">- R$ {reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-zinc-600 italic">
-                      <span>(-) Taxa de Performance (10% sobre lucro)</span>
-                      <span className="text-ruby font-bold">- R$ {((((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) - (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) > 0 ? (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) - (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) * 0.10 : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span>(-) Taxa de Serviço Spotlight (2,5%)</span>
+                      <span className="text-ruby font-bold">- R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * 0.025).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-zinc-600">
                       <span>(-) Cachês de Atrações</span>
@@ -1031,14 +1023,14 @@ export default function ListarEventosPage() {
                         reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
                         reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
                         (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                        (((((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) - (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) > 0) ? (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) - (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) * 0.10 : 0) >= 0 ? 'text-green-600' : 'text-ruby'
+                        ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * 0.025) >= 0 ? 'text-green-600' : 'text-ruby'
                       }>
                         R$ {(
                         ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
                         reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
                         reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
                         (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                        (((((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) - (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) > 0) ? (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) - (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0)) * 0.10 : 0)
+                        ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * 0.025)
                         ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -1088,7 +1080,7 @@ export default function ListarEventosPage() {
             <div className="flex flex-col sm:flex-row gap-3">
               <Button onClick={handleDownloadInvoice} variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-bold hover:bg-zinc-50 cursor-pointer shadow-sm">
                 <FileText className="w-4 h-4 mr-2 text-ruby" />
-                Fatura de Performance (10%)
+                Fatura de Serviço (2,5%)
               </Button>
               <Button onClick={handleDownloadExcel} variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-bold hover:bg-zinc-50 cursor-pointer shadow-sm">
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />

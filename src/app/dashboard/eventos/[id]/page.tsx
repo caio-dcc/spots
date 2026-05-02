@@ -179,7 +179,7 @@ export default function EventDetailsPage() {
   
   const totalDespesasVariaveis = totalCaches + totalDiarias + totalExtras;
   const lucroPrejuizoEvento = totalReceita - totalDespesasVariaveis;
-  const taxaUso = lucroPrejuizoEvento > 0 ? lucroPrejuizoEvento * 0.10 : 0; // 10% sobre o lucro (Modelo de Performance)
+  const taxaUso = totalReceita * 0.025; // 2.5% sobre a receita bruta (Modelo de Tração)
   const resultadoFinalComTaxa = lucroPrejuizoEvento - taxaUso;
 
   // Custo dos funcionários efetivados (salário mensal)
@@ -246,7 +246,7 @@ export default function EventDetailsPage() {
                   <span className="text-red-400 font-mono">- R$ {totalDiarias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted-foreground font-bold uppercase">Taxa de Performance (10%)</span>
+                  <span className="text-muted-foreground font-bold uppercase">Taxa de Serviço Spotlight (2,5%)</span>
                   <span className="text-red-400 font-mono">- R$ {taxaUso.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 {totalExtras > 0 && (
@@ -338,24 +338,7 @@ export default function EventDetailsPage() {
               </div>
             </div>
 
-            {event.status === 'finalizado' && (
-              <div className="mt-8 grid grid-cols-2 gap-4">
-                <Button 
-                  onClick={() => toast.success("Gerando PDF...")} 
-                  variant="outline"
-                  className="w-full bg-background hover:bg-muted text-foreground font-black h-14 rounded-2xl shadow-sm transition-all active:scale-95 flex gap-3 uppercase tracking-widest text-xs border-zinc-200"
-                >
-                  Baixar Relatório (PDF)
-                </Button>
-                <Button 
-                  onClick={() => toast.success("Gerando Excel...")} 
-                  variant="outline"
-                  className="w-full bg-background hover:bg-muted text-foreground font-black h-14 rounded-2xl shadow-sm transition-all active:scale-95 flex gap-3 uppercase tracking-widest text-xs border-zinc-200"
-                >
-                  Baixar Financeiro (Excel)
-                </Button>
-              </div>
-            )}
+            {/* Relatórios de Finalização Removidos a pedido do usuário */}
           </section>
 
           {/* Artistas e Atrações List View */}
