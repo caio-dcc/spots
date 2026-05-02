@@ -330,7 +330,7 @@ export default function ListarEventosPage() {
       doc.text(`(-) Cachês de Atrações: R$ ${artistCaches.toFixed(2)}`, 14, 54);
       doc.text(`(-) Diárias de Staff: R$ ${staffCosts.toFixed(2)}`, 14, 60);
       doc.text(`(-) Despesas Adicionais: R$ ${extraExpenses.toFixed(2)}`, 14, 66);
-      doc.text(`(-) Taxa do Sistema (5%): R$ ${devFee.toFixed(2)}`, 14, 72);
+      doc.text(`(-) Taxa de Performance Spotlight (10%): R$ ${devFee.toFixed(2)}`, 14, 72);
       doc.setFont('helvetica', 'bold');
       doc.text(`(=) LUCRO LÍQUIDO: R$ ${profit.toFixed(2)}`, 14, 82);
       doc.setFont('helvetica', 'normal');
@@ -372,7 +372,12 @@ export default function ListarEventosPage() {
     try {
       const doc = new jsPDF();
       const revenue = (activeEvent.capacity || 0) * (activeEvent.ticket_price || 0);
-      const devFee = revenue * 0.05;
+      const staffCosts = reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0);
+      const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+      const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
+      
+      const profitBeforeFee = revenue - staffCosts - extraExpenses - artistCaches;
+      const devFee = profitBeforeFee > 0 ? profitBeforeFee * 0.10 : 0;
       
       doc.setFontSize(22);
       doc.setTextColor(225, 29, 72);
@@ -1083,7 +1088,7 @@ export default function ListarEventosPage() {
             <div className="flex flex-col sm:flex-row gap-3">
               <Button onClick={handleDownloadInvoice} variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-bold hover:bg-zinc-50 cursor-pointer shadow-sm">
                 <FileText className="w-4 h-4 mr-2 text-ruby" />
-                Fatura da Taxa (5%)
+                Fatura de Performance (10%)
               </Button>
               <Button onClick={handleDownloadExcel} variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-bold hover:bg-zinc-50 cursor-pointer shadow-sm">
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />

@@ -246,7 +246,7 @@ export default function EventDetailsPage() {
                   <span className="text-red-400 font-mono">- R$ {totalDiarias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-muted-foreground font-bold uppercase">Taxa de Uso (5%)</span>
+                  <span className="text-muted-foreground font-bold uppercase">Taxa de Performance (10%)</span>
                   <span className="text-red-400 font-mono">- R$ {taxaUso.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 {totalExtras > 0 && (
