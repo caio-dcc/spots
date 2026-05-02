@@ -27,8 +27,11 @@ export function maskCurrency(value: string): string {
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function unmaskCurrency(value: string): number {
-  return Number(value.replace(/\./g, '').replace(',', '.')) || 0;
+export function unmaskCurrency(value: any): number {
+  if (typeof value === 'number') return value;
+  if (!value || typeof value !== 'string') return 0;
+  const cleanValue = value.replace(/\./g, '').replace(',', '.');
+  return Number(cleanValue) || 0;
 }
 
 // Validações
@@ -80,6 +83,6 @@ export function validateEvent(data: {
   const errors: ValidationError[] = [];
   if (!data.title || data.title.trim().length < 3) errors.push({ field: 'title', message: 'Nome do evento deve ter no mínimo 3 caracteres.' });
   if (!data.eventDate) errors.push({ field: 'eventDate', message: 'Data do evento é obrigatória.' });
-  if (!data.capacity || Number(data.capacity) < 1) errors.push({ field: 'capacity', message: 'Capacidade deve ser no mínimo 1.' });
+  if (!data.capacity || Number(data.capacity) < 1) errors.push({ field: 'capacity', message: 'A quantidade de ingressos vendidos deve ser no mínimo 1.' });
   return errors;
 }

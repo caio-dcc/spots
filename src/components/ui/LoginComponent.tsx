@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useState } from 'react'
 import Image from 'next/image';
+import Link from 'next/link';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 
 interface InputProps {
@@ -37,7 +38,7 @@ const AppInput = (props: InputProps) => {
       }
       <div className="relative w-full">
         <input
-          className="peer relative z-10 border-2 border-[var(--color-border)] h-14 w-full rounded-2xl bg-[var(--color-surface)] px-6 font-bold text-[var(--color-text-primary)] outline-none drop-shadow-sm transition-all duration-200 ease-in-out focus:bg-[var(--color-bg)] focus:border-[var(--color-accent)] placeholder:text-[var(--color-text-secondary)] placeholder:font-medium"
+          className="peer relative z-10 border-2 border-white/20 h-14 w-full rounded-2xl bg-white/10 backdrop-blur-sm px-6 font-bold text-white outline-none transition-all duration-200 ease-in-out focus:bg-white/15 focus:border-white/60 placeholder:text-white/50 placeholder:font-medium"
           placeholder={placeholder}
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovering(true)}
@@ -78,6 +79,7 @@ interface LoginComponentProps {
     accentRGB?: string;
     onSubmit?: (email: string, pass: string) => void;
     loading?: boolean;
+    forgotPasswordHref?: string;
 }
 
 const LoginComponent = ({ 
@@ -87,7 +89,8 @@ const LoginComponent = ({
     accentColor = "#9B111E",
     accentRGB = "155, 17, 30",
     onSubmit,
-    loading = false
+    loading = false,
+    forgotPasswordHref = "/esqueci-senha"
 }: LoginComponentProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -135,7 +138,7 @@ const LoginComponent = ({
 
   return (
     <div className="w-full max-w-5xl flex items-center justify-center p-4" style={{ '--color-accent': accentColor, '--color-accent-rgb': accentRGB } as any}>
-    <div className='w-full flex justify-between h-[650px] bg-[var(--color-surface)] rounded-[3.5rem] overflow-hidden border border-[var(--color-border)] shadow-2xl'>
+    <div className='w-full flex justify-between h-[650px] bg-transparent rounded-[3.5rem] overflow-hidden border border-transparent'>
       <div
         className='w-full lg:w-1/2 px-8 lg:px-16 h-full relative overflow-hidden'
         onMouseMove={handleMouseMove}
@@ -154,32 +157,8 @@ const LoginComponent = ({
           <div className="h-full z-10 flex flex-col justify-center py-10">
             <form className='grid gap-8' onSubmit={handleSubmit}>
               <div className='grid gap-4 mb-2'>
-                <h1 className='text-4xl font-black text-[var(--color-heading)] tracking-tighter uppercase'>{title}</h1>
-                <div className="flex items-center gap-4">
-                    <ul className="flex gap-3">
-                      {socialIcons.map((social, index) => {
-                        return (
-                          <li key={index} className="list-none">
-                            <a
-                              href={social.href}
-                              className={`w-10 h-10 bg-[var(--color-muted-surface)] rounded-full flex justify-center items-center relative z-[1] border border-[var(--color-border)] overflow-hidden group transition-all hover:border-[var(--color-accent)]`}
-                            >
-                              <div
-                                className={`absolute inset-0 w-full h-full ${
-                                  social.gradient || social.bg
-                                } scale-y-0 origin-bottom transition-transform duration-500 ease-in-out group-hover:scale-y-100`}
-                              />
-                              <span className="text-[var(--color-text-primary)] transition-all duration-500 ease-in-out z-[2] group-hover:text-white">
-                                {social.icon}
-                              </span>
-                            </a>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                  <div className="h-[1px] flex-1 bg-[var(--color-border)]" />
-                </div>
-                <span className='text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-secondary)]'>{subtitle}</span>
+                <h1 className='text-4xl font-black text-white tracking-tighter uppercase'>{title}</h1>
+                <span className='text-[10px] font-black uppercase tracking-[0.2em] text-white/40'>Gestão Operacional de Teatros, Shows e Concertos de forma analítica e personalizada</span>
               </div>
               <div className='grid gap-6'>
                 <AppInput 
@@ -197,11 +176,11 @@ const LoginComponent = ({
                         onChange={(e) => setPassword(e.target.value)}
                         icon={<Lock size={18} />}
                     />
-                    <a href="#" className='text-[9px] font-black text-[var(--color-text-secondary)] uppercase tracking-widest hover:text-[var(--color-accent)] transition-colors text-right px-1'>Esqueci minha senha</a>
+                    <Link href={forgotPasswordHref} className='text-[11px] font-black text-white/40 uppercase tracking-widest hover:text-white transition-colors text-right px-1'>Esqueci minha senha</Link>
                 </div>
               </div>
               
-              <div className='flex justify-start'>
+              <div className='flex justify-center lg:justify-start'>
                  <button 
                   type="submit"
                   disabled={loading}
@@ -223,7 +202,7 @@ const LoginComponent = ({
         </div>
         <div className='hidden lg:block w-1/2 h-full overflow-hidden relative group'>
             <div className="absolute inset-0 bg-[var(--color-accent)]/20 z-10 mix-blend-overlay group-hover:opacity-0 transition-opacity duration-700" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-surface)] to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent z-10" />
             <Image
               src={image}
               width={1000}

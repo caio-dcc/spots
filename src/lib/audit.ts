@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 export async function logAction(
-  theaterId: string,
+  contextId: string, // Pode ser o ID do registro afetado ou o ID do usuário
   action: string,
   targetTable: string,
   targetId?: string
@@ -10,23 +10,31 @@ export async function logAction(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Buscar o username do user_roles
-    const { data: role } = await supabase
-      .from('user_roles')
-      .select('username')
-      .eq('user_id', user.id)
-      .eq('theater_id', theaterId)
-      .single();
+    const username = user.email || 'Usuário Desconhecido';
 
-    await supabase.from('audit_logs').insert({
-      theater_id: theaterId,
+    const isUuid = (str?: string) => {
+      if (!str) return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
+    const finalTargetId = isUuid(targetId) ? targetId : null;
+    const finalAction = !isUuid(targetId) && targetId 
+      ? `${action.toUpperCase()} (${targetId})` 
+      : action.toUpperCase();
+
+    const { error } = await supabase.from('audit_logs').insert({
       user_id: user.id,
-      username: role?.username || user.email || 'Usuário Desconhecido',
-      action,
+      username: username,
+      action: finalAction,
       target_table: targetTable,
-      target_id: targetId
+      target_id: finalTargetId
     });
+
+    if (error) {
+      console.warn("Aviso: Falha ao gravar log de auditoria. Verifique as políticas de RLS.", error.message);
+    }
   } catch (error) {
-    console.error("Erro ao registrar log de auditoria:", error);
+    console.error("Erro crítico ao registrar log de auditoria:", error);
   }
 }
