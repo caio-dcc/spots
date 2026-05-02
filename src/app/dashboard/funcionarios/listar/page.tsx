@@ -155,7 +155,6 @@ export default function ListarFuncionariosPage() {
     }
   };
 
-  const getError = (field: string) => errors.find(e => e.field === field)?.message;
 
   return (
     <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto">
