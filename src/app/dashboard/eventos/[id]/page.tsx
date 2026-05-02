@@ -179,7 +179,8 @@ export default function EventDetailsPage() {
   
   const totalDespesasVariaveis = totalCaches + totalDiarias + totalExtras;
   const lucroPrejuizoEvento = totalReceita - totalDespesasVariaveis;
-  const taxaUso = totalReceita * 0.025; // 2.5% sobre a receita bruta (Modelo de Tração)
+  const currentFeePercent = totalReceita > 50000 ? 0.05 : 0.025;
+  const taxaUso = totalReceita * currentFeePercent;
   const resultadoFinalComTaxa = lucroPrejuizoEvento - taxaUso;
 
   // Custo dos funcionários efetivados (salário mensal)
