@@ -400,9 +400,9 @@ export default function GerarListaPage() {
         </div>
 
         <div className="absolute top-4 right-8">
-          <label className="flex items-center gap-2 text-[9px] font-black text-zinc-600 uppercase cursor-pointer hover:text-ruby transition-all group">
-            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-all ${ignoreDetails ? 'bg-ruby border-ruby' : 'border-white/10 group-hover:border-ruby'}`}>
-              {ignoreDetails && <Check className="w-2.5 h-2.5 text-white stroke-[4]" />}
+          <label className="flex items-center gap-2 text-xs font-black text-zinc-600 uppercase cursor-pointer hover:text-ruby transition-all group">
+            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${ignoreDetails ? 'bg-ruby border-ruby' : 'border-white/10 group-hover:border-ruby'}`}>
+              {ignoreDetails && <Check className="w-3.5 h-3.5 text-white stroke-[4]" />}
             </div>
             <input type="checkbox" checked={ignoreDetails} onChange={e => setIgnoreDetails(e.target.checked)} className="hidden" />
             Ignorar Detalhes
@@ -472,7 +472,7 @@ export default function GerarListaPage() {
                       </>
                     )}
                     <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <div className="flex items-center justify-end gap-1 transition-all">
                         <button onClick={() => handleOpenEdit(g)} className="p-2 text-zinc-400 hover:text-blue-500 cursor-pointer"><Pencil className="w-4 h-4" /></button>
                         <button onClick={() => handleDelete(g.id)} className="p-2 text-zinc-400 hover:text-red-500 cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                       </div>

@@ -42,20 +42,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Campos obrigatórios faltando." }, { status: 400 });
     }
 
-    // Buscar evento e o Stripe Account ID do organizador (produtor)
+    // Buscar evento (sem JOIN com profiles: events.user_id referencia auth.users,
+    // não public.profiles, então PostgREST não resolve essa relação. Buscamos em 2 passos.)
     const { data: event, error: evErr } = await supabaseAdmin
       .from("events")
-      .select(`
-        id, title, event_date, ticket_price, is_public, sale_ends_at, user_id,
-        profiles!events_user_id_fkey (stripe_account_id)
-      `)
+      .select("id, title, event_date, ticket_price, is_public, sale_ends_at, user_id")
       .eq("id", event_id)
       .single();
 
     if (evErr || !event) return NextResponse.json({ error: "Evento não encontrado." }, { status: 404 });
-    
-    // @ts-ignore
-    const organizerStripeId = event.profiles?.stripe_account_id;
+
+    const { data: ownerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_account_id")
+      .eq("id", event.user_id)
+      .single();
+
+    const organizerStripeId = ownerProfile?.stripe_account_id;
 
     if (!event.is_public) return NextResponse.json({ error: "Este evento não está disponível para venda online." }, { status: 403 });
     if (event.sale_ends_at && new Date(event.sale_ends_at) < new Date()) {
@@ -113,7 +116,7 @@ export async function POST(req: NextRequest) {
         metadata: { event_id, ticket_code: ticketCode, qr_code: qrCode },
       },
       metadata: { event_id, ticket_code: ticketCode, qr_code: qrCode },
-      success_url: `${appUrl}/e/${event.id}/confirmacao?order={CHECKOUT_SESSION_ID}`,
+      success_url: `${appUrl}/meus-pedidos?paid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/e/${event.id}?cancelled=1`,
     };
 

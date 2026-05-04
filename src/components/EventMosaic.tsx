@@ -73,13 +73,13 @@ export function EventMosaic() {
         {/* Navigation Arrows */}
         <button 
           onClick={() => scroll("left")}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/60 border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-ruby hover:border-ruby"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/60 border border-white/10 text-white transition-opacity cursor-pointer hover:bg-ruby hover:border-ruby"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button 
           onClick={() => scroll("right")}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/60 border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:bg-ruby hover:border-ruby"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/60 border border-white/10 text-white transition-opacity cursor-pointer hover:bg-ruby hover:border-ruby"
         >
           <ChevronRight className="w-6 h-6" />
         </button>

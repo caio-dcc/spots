@@ -133,7 +133,7 @@ export default function RelatoriosPage() {
   };
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sans">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sans bg-transparent">
       <div className="flex flex-col items-center text-center md:text-left md:items-start md:flex-row justify-between mb-8 gap-6 print:hidden">
         <div className="animate-in slide-in-from-left duration-500">
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Relatórios gerenciais</h1>
@@ -154,7 +154,7 @@ export default function RelatoriosPage() {
             <div className="flex flex-col gap-2 w-full md:w-auto">
               <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Selecione o Funcionário</label>
               <select 
-                className="h-11 w-full md:w-80 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 px-3 py-2 text-sm cursor-pointer font-bold shadow-inner text-zinc-900 dark:text-white"
+                className="h-11 w-full md:w-80 rounded-xl border border-zinc-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm cursor-pointer font-bold shadow-inner text-zinc-900 dark:text-white"
                 value={selectedEmployeeId}
                 onChange={e => setSelectedEmployeeId(e.target.value)}
               >
@@ -253,7 +253,7 @@ export default function RelatoriosPage() {
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm print:hidden flex flex-col items-center text-center md:items-start md:text-left gap-2">
             <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Selecione o evento</label>
             <select 
-              className="flex h-11 w-full md:w-[400px] rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 px-3 py-2 text-sm cursor-pointer font-bold shadow-inner text-zinc-900 dark:text-white" 
+              className="flex h-11 w-full md:w-[400px] rounded-xl border border-zinc-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm cursor-pointer font-bold shadow-inner text-zinc-900 dark:text-white" 
               value={guestEventId} 
               onChange={e => setGuestEventId(e.target.value)}
             >

@@ -3,15 +3,21 @@
 import { useState } from "react";
 import { Link as LinkIcon, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import {
+  organizerShareLabel,
+  platformFeeLabel,
+} from "@/lib/platform-fee";
 
 interface StripeConnectButtonProps {
   stripeAccountId?: string | null;
   userEmail?: string;
+  /** Chamado imediatamente antes do redirect para a Stripe (ex.: analytics). */
+  onBeforeRedirect?: () => void;
 }
 
 export function StripeConnectButton({
   stripeAccountId,
-  userEmail,
+  onBeforeRedirect,
 }: StripeConnectButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,15 +28,32 @@ export function StripeConnectButton({
 
     try {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!user) {
-        throw new Error("Usuário não autenticado");
+      if (!session?.access_token) {
+        throw new Error("Faça login novamente para conectar o Stripe.");
       }
 
-      // Redireciona para o OAuth do Stripe
-      window.location.href = `/api/stripe/connect/authorize?user_id=${user.id}`;
+      const res = await fetch("/api/stripe/connect/authorize", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Não foi possível iniciar a conexão.");
+      }
+
+      if (!data.url || typeof data.url !== "string") {
+        throw new Error("Resposta inválida do servidor.");
+      }
+
+      onBeforeRedirect?.();
+      window.location.href = data.url;
     } catch (err: any) {
       setError(err.message || "Erro ao conectar Stripe");
       setLoading(false);
@@ -73,9 +96,9 @@ export function StripeConnectButton({
       </button>
 
       <p className="text-xs text-white/50 text-center">
-        Você receberá 95% do valor dos ingressos vendidos.
+        Você recebe {organizerShareLabel()} do valor bruto do ingresso.
         <br />
-        Spotlight cobra uma taxa de 5% por ingresso.
+        A plataforma retém {platformFeeLabel()} como taxa de serviço (repasse automático).
       </p>
     </div>
   );

@@ -1,49 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 
-export async function GET(req: NextRequest) {
+/**
+ * Inicia OAuth Stripe Connect de forma segura: o user_id vem do JWT,
+ * nunca da query string (evita vincular conta Stripe a outro usuário).
+ */
+export async function POST(req: NextRequest) {
   try {
-    // Pega o user_id da sessão/query
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("user_id");
-
-    if (!userId) {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "user_id é obrigatório" },
-        { status: 400 }
+        { error: "Faça login para conectar o Stripe." },
+        { status: 401 }
+      );
+    }
+    const token = authHeader.slice(7);
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Sessão inválida. Entre novamente." },
+        { status: 401 }
       );
     }
 
-    // Verifica se user é organizador
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("id, email, organization_name")
-      .eq("id", userId)
+      .select("id")
+      .eq("id", user.id)
       .single();
 
     if (profileError || !profile) {
+      return NextResponse.json({ error: "Perfil não encontrado." }, { status: 404 });
+    }
+
+    const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
+    if (!clientId) {
+      console.error("[stripe/connect/authorize] STRIPE_CONNECT_CLIENT_ID ausente");
       return NextResponse.json(
-        { error: "Perfil não encontrado" },
-        { status: 404 }
+        { error: "Pagamentos não configurados na plataforma." },
+        { status: 503 }
       );
     }
 
-    // Cria o OAuth link do Stripe Connect manualmente (Stripe SDK não tem helper para isso)
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/connect/callback`;
-    const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
-    
-    if (!clientId) {
-      throw new Error("STRIPE_CONNECT_CLIENT_ID não configurado.");
-    }
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const redirectUri = `${appUrl.replace(/\/$/, "")}/api/stripe/connect/callback`;
 
-    const authUrl = `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=${clientId}&scope=read_write&state=${userId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      scope: "read_write",
+      state: user.id,
+      redirect_uri: redirectUri,
+    });
 
-    return NextResponse.redirect(authUrl);
+    const url = `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
+
+    return NextResponse.json({ url });
   } catch (error: any) {
     console.error("[stripe/connect/authorize] Erro:", error);
     return NextResponse.json(
-      { error: "Erro ao iniciar OAuth do Stripe" },
+      { error: "Erro ao iniciar conexão Stripe." },
       { status: 500 }
     );
   }

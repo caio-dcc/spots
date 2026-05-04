@@ -76,7 +76,7 @@ export default function ReportProblemPage() {
                       placeholder="Ex: Erro ao finalizar compra"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-6 text-white font-bold outline-none focus:border-ruby/50 focus:bg-ruby/5 transition-all placeholder:text-white/20"
+                      className="w-full h-14 !bg-transparent border border-white/10 rounded-2xl px-6 !text-white/50 font-bold outline-none focus:border-ruby/50 transition-all placeholder:text-white/20 appearance-none"
                     />
                   </div>
 
@@ -88,7 +88,7 @@ export default function ReportProblemPage() {
                       placeholder="Descreva o que aconteceu em detalhes..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 text-white font-bold outline-none focus:border-ruby/50 focus:bg-ruby/5 transition-all placeholder:text-white/20 resize-none"
+                      className="w-full !bg-transparent border border-white/10 rounded-3xl p-6 !text-white/50 font-bold outline-none focus:border-ruby/50 transition-all placeholder:text-white/20 resize-none appearance-none"
                     />
                   </div>
                 </div>

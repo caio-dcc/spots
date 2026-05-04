@@ -24,6 +24,7 @@ export default function EventMosaicPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,18 +36,14 @@ export default function EventMosaicPage() {
     try {
       const {
         data: { user },
-        error,
       } = await supabase.auth.getUser();
 
-      if (error || !user) {
-        router.push("/login");
-        return;
+      if (user) {
+        setIsLoggedIn(true);
+        setUserEmail(user.email || "");
       }
-
-      setUserEmail(user.email || "");
     } catch (err) {
       console.error("Erro ao verificar autenticação:", err);
-      router.push("/login");
     }
   };
 
@@ -69,6 +66,10 @@ export default function EventMosaicPage() {
   };
 
   const handlePurchaseClick = (event: Event) => {
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
     router.push(`/e/${event.id}/checkout`);
   };
 

@@ -5,10 +5,8 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Calendar, MapPin, Ticket, ArrowRight, XCircle, Users } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2, Calendar, Ticket, ArrowRight, XCircle } from "lucide-react";
 
 interface EventData {
   id: string;
@@ -37,11 +35,17 @@ function PublicEventContent() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [benefits, setBenefits] = useState<Benefit[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [selectedBenefit, setSelectedBenefit] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -75,7 +79,18 @@ function PublicEventContent() {
 
   const total = selectedPrice * quantity;
 
+  const handlePurchase = () => {
+    const params = new URLSearchParams();
+    if (selectedBenefit) params.set("benefit", selectedBenefit);
+    params.set("qty", quantity.toString());
+    const checkoutPath = `/e/${slug}/checkout?${params.toString()}`;
 
+    if (!isLoggedIn) {
+      router.push(`/login?redirect=${encodeURIComponent(checkoutPath)}`);
+      return;
+    }
+    router.push(checkoutPath);
+  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50">
@@ -191,7 +206,7 @@ function PublicEventContent() {
                 <XCircle className="w-10 h-10 text-zinc-300 mx-auto mb-3" />
                 <p className="font-black text-zinc-500 text-sm">Vendas encerradas</p>
               </div>
-            ) : step === "select" ? (
+            ) : (
               <div className="p-5 space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Quantidade</Label>
@@ -216,12 +231,7 @@ function PublicEventContent() {
                 </div>
 
                 <Button
-                  onClick={() => {
-                    const params = new URLSearchParams();
-                    if (selectedBenefit) params.set("benefit", selectedBenefit);
-                    params.set("qty", quantity.toString());
-                    router.push(`/e/${slug}/checkout?${params.toString()}`);
-                  }}
+                  onClick={handlePurchase}
                   className="w-full h-13 bg-zinc-900 hover:bg-zinc-800 text-white font-black rounded-xl transition-all active:scale-95 cursor-pointer"
                 >
                   Comprar Agora

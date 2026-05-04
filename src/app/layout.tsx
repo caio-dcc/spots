@@ -52,17 +52,17 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var saved = localStorage.getItem('spotme_dark_mode');
-                  var isDark = saved === 'true';
+                  var saved = localStorage.getItem('spotlight_theme');
+                  // Default to dark for the cinematic experience
+                  var theme = saved || 'dark';
+                  var isDark = theme === 'dark';
                   var html = document.documentElement;
                   
-                  // Tailwind / Global CSS
+                  html.setAttribute('data-theme', theme);
                   if (isDark) {
                     html.classList.add('dark');
-                    html.setAttribute('data-theme', 'dark');
                   } else {
                     html.classList.remove('dark');
-                    html.setAttribute('data-theme', 'light');
                   }
                   
                   // Mantine Color Scheme

@@ -710,7 +710,7 @@ export default function ListarEventosPage() {
 
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sans bg-background text-foreground">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sans bg-transparent text-foreground">
       <div className="flex flex-col md:flex-row items-center text-center md:text-left justify-between mb-6 gap-4">
         <div className="animate-in slide-in-from-left duration-500 w-full md:w-auto">
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Eventos</h1>

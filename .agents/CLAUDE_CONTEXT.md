@@ -28,6 +28,7 @@ Consolidado com base no "Relatório de continuação — Spotlight (bilheteria/S
 - **Painel Admin (`/admin/view`)**: Dashboard com métricas e controle de organizadores.
 - **Check-in**: Scanner suporta UUID (Stripe) e legacy (`spotme_guest_*`).
 - **Styles**: Sidebar dark e UI consistente.
+- **FAQ**: Animações suaves de abertura (Framer Motion) ✅.
 
 ---
 

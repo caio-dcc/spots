@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { TrendingUp, AlertCircle, DollarSign, TrendingDown } from "lucide-react";
-import { StripeConnectButton } from "@/components/StripeConnectButton";
+import { StripeConnectPanel } from "@/components/StripeConnectPanel";
 
 interface EarningsData {
   totalSales: number;
@@ -128,11 +128,11 @@ export default function GanhosPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 bg-transparent">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Ganhos</h1>
-        <p className="text-white/60">Acompanhe seu faturamento e saldo disponível</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Ganhos</h1>
+        <p className="text-muted-foreground">Acompanhe seu faturamento e saldo disponível</p>
       </div>
 
       {/* Alertas */}
@@ -158,17 +158,7 @@ export default function GanhosPage() {
         </div>
       )}
 
-      {!stripeAccountId && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-6 space-y-4">
-          <div>
-            <h3 className="font-semibold text-white mb-2">⚠️ Conecte sua Conta Stripe</h3>
-            <p className="text-sm text-white/60 mb-4">
-              Para receber pagamentos dos ingressos vendidos, você precisa conectar sua conta Stripe.
-            </p>
-          </div>
-          <StripeConnectButton stripeAccountId={stripeAccountId} />
-        </div>
-      )}
+      <StripeConnectPanel stripeAccountId={stripeAccountId} />
 
       {/* Cards de Resumo */}
       {earnings && (

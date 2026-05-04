@@ -372,6 +372,65 @@ input[type=number]::-webkit-outer-spin-button:hover {
   opacity: 1;
 }
 
-input[type=number] {
-  -moz-appearance: textfield; /* Hides in Firefox, as it doesn't support background styling on the spinner */
+/* Dashboard Premium Styles */
+[data-theme="dark"] {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+}
+
+[data-theme="dark"] .bg-white, 
+[data-theme="dark"] .bg-card,
+[data-theme="dark"] .bg-background {
+  background-color: rgba(24, 24, 27, 0.4) !important;
+  backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .text-zinc-900,
+[data-theme="dark"] .text-zinc-800,
+[data-theme="dark"] .text-zinc-700 {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .text-zinc-400,
+[data-theme="dark"] .text-zinc-500 {
+  color: #a1a1aa !important;
+}
+
+/* Fix for icons (Pencil, Trash2, etc.) */
+[data-theme="dark"] .lucide-pencil,
+[data-theme="dark"] .lucide-trash2,
+[data-theme="dark"] .lucide-edit-2,
+[data-theme="dark"] .lucide-more-vertical {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .bg-sidebar {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .hover\:bg-zinc-100:hover,
+[data-theme="dark"] .hover\:bg-zinc-50:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Transparent Inputs for Dashboard */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.5) !important; /* matching labels */
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 0.75rem !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: rgba(161, 161, 170, 0.5) !important;
+}
+
+[data-theme="dark"] select option {
+  background-color: #09090b !important;
+  color: #f4f4f5 !important;
 }

@@ -279,7 +279,7 @@ export default function DashboardPage() {
   const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto font-sans bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto font-sans bg-transparent text-foreground">
       <div className="flex flex-col mb-8 gap-6">
         <div className="flex flex-col md:flex-row justify-between items-center md:items-center gap-4 text-center md:text-left">
           <div className="w-full">

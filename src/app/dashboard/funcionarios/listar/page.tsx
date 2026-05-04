@@ -157,7 +157,7 @@ export default function ListarFuncionariosPage() {
 
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto bg-transparent">
       <div className="flex flex-col md:flex-row items-center text-center md:text-left justify-between mb-6 gap-4">
         <div className="animate-in slide-in-from-left duration-500 w-full md:w-auto">
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Funcionários</h1>
@@ -179,7 +179,7 @@ export default function ListarFuncionariosPage() {
           <Input 
             type="text" 
             placeholder="Buscar por nome..." 
-            className="pl-10 w-full bg-white border-zinc-200 h-11 rounded-xl shadow-sm focus:ring-ruby"
+            className="pl-10 w-full bg-transparent border-zinc-200 h-11 rounded-xl shadow-sm focus:ring-ruby"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -187,7 +187,7 @@ export default function ListarFuncionariosPage() {
         
         <div className="flex flex-col md:flex-row w-full gap-3 md:w-auto">
           <select 
-            className="flex-1 h-11 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ruby cursor-pointer font-bold md:w-40 shadow-sm transition-all"
+            className="flex-1 h-11 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ruby cursor-pointer font-bold md:w-40 shadow-sm transition-all"
             value={filterDepartamento}
             onChange={(e) => {
               setFilterDepartamento(e.target.value);
@@ -204,7 +204,7 @@ export default function ListarFuncionariosPage() {
           </select>
 
           <select 
-            className="flex-1 h-11 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ruby cursor-pointer font-bold md:w-40 shadow-sm transition-all"
+            className="flex-1 h-11 rounded-xl border border-zinc-200 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ruby cursor-pointer font-bold md:w-40 shadow-sm transition-all"
             value={filterStatus}
             onChange={(e) => {
               setFilterStatus(e.target.value);

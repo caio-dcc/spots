@@ -151,7 +151,7 @@ export function ReportProblemModal({
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Ex: Ingresso não foi entregue"
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-ruby focus:outline-none transition text-sm"
+                  className="w-full px-4 py-3 rounded-lg !bg-transparent border border-white/20 !text-white/70 placeholder-white/40 focus:border-ruby focus:outline-none transition text-sm appearance-none"
                 />
               </div>
 
@@ -164,7 +164,7 @@ export function ReportProblemModal({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Descreva detalhadamente o problema..."
-                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 focus:border-ruby focus:outline-none transition resize-none h-32 text-sm"
+                  className="w-full px-4 py-3 rounded-lg !bg-transparent border border-white/20 !text-white/70 placeholder-white/40 focus:border-ruby focus:outline-none transition resize-none h-32 text-sm appearance-none"
                 />
                 <p className="text-xs text-white/50">
                   Mínimo de 10 caracteres

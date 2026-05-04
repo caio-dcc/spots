@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { PLATFORM_FEE_PERCENT } from "./platform-fee";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error("STRIPE_SECRET_KEY não configurada no .env.local");
@@ -9,4 +10,4 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   typescript: true,
 });
 
-export const PLATFORM_FEE_PERCENT = 0.05; // 5% por ingresso (Essencial tier)
+export { PLATFORM_FEE_PERCENT };

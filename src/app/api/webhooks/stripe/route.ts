@@ -23,10 +23,29 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const eventAlreadyProcessed = await isStripeEventProcessed(event.id);
+    if (eventAlreadyProcessed) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        await handlePaymentSuccess(session);
+        await handleCheckoutCompleted(session);
+        break;
+      }
+      case "checkout.session.async_payment_succeeded": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutCompleted(session);
+        break;
+      }
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await supabaseAdmin
+          .from("ticket_orders")
+          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+          .eq("stripe_session_id", session.id)
+          .in("status", ["pending"]);
         break;
       }
       case "checkout.session.expired": {
@@ -34,7 +53,8 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin
           .from("ticket_orders")
           .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-          .eq("stripe_session_id", session.id);
+          .eq("stripe_session_id", session.id)
+          .in("status", ["pending"]);
         break;
       }
       case "charge.refunded": {
@@ -50,6 +70,8 @@ export async function POST(req: NextRequest) {
         // Ignorar eventos não tratados
         break;
     }
+
+    await markStripeEventAsProcessed(event.id, event.type);
   } catch (err: any) {
     console.error("[webhook] Erro ao processar evento:", err);
     return NextResponse.json({ error: "Erro interno ao processar webhook." }, { status: 500 });
@@ -58,8 +80,29 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
-  const { id: sessionId, payment_intent, metadata } = session;
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const { id: sessionId, payment_intent } = session;
+  const paymentStatus = session.payment_status;
+
+  // Confirma apenas quando o pagamento foi realmente liquidado.
+  if (paymentStatus !== "paid" && paymentStatus !== "no_payment_required") {
+    return;
+  }
+
+  const { data: existingOrder } = await supabaseAdmin
+    .from("ticket_orders")
+    .select("id, status")
+    .eq("stripe_session_id", sessionId)
+    .maybeSingle();
+
+  if (!existingOrder) {
+    console.error("[webhook] Pedido não encontrado para sessão:", sessionId);
+    return;
+  }
+
+  if (existingOrder.status === "paid" || existingOrder.status === "checked_in") {
+    return;
+  }
 
   const { data: order, error } = await supabaseAdmin
     .from("ticket_orders")
@@ -78,22 +121,51 @@ async function handlePaymentSuccess(session: Stripe.Checkout.Session) {
   }
 
   if (order) {
+    const { data: guest } = await supabaseAdmin
+      .from("guests")
+      .select("id")
+      .eq("order_id", order.id)
+      .maybeSingle();
+
     // Vincula o pedido pago a uma linha em `guests` para que o scanner do organizador
     // (que conta presenças por benefit_id) reflita corretamente a venda online.
-    await supabaseAdmin.from("guests").insert({
-      event_id: order.event_id,
-      benefit_id: order.benefit_id ?? null,
-      name: order.buyer_name,
-      quantity: order.quantity,
-      checked_in: false,
-      qr_code: order.qr_code,
-      order_id: order.id,
-    });
+    if (!guest) {
+      await supabaseAdmin.from("guests").insert({
+        event_id: order.event_id,
+        benefit_id: order.benefit_id ?? null,
+        name: order.buyer_name,
+        quantity: order.quantity,
+        checked_in: false,
+        qr_code: order.qr_code,
+        order_id: order.id,
+      });
+    }
+    // Sem envio de e-mail: o ingresso é exibido em /meus-pedidos.
+  }
+}
 
-    // Notificação por e-mail desativada (Resend removido)
-    await supabaseAdmin
-      .from("ticket_orders")
-      .update({ email_sent: false })
-      .eq("id", order.id);
+async function isStripeEventProcessed(eventId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("stripe_webhook_events")
+    .select("id")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[webhook] Erro ao consultar idempotência:", error);
+    return false;
+  }
+
+  return !!data;
+}
+
+async function markStripeEventAsProcessed(eventId: string, eventType: string) {
+  const { error } = await supabaseAdmin
+    .from("stripe_webhook_events")
+    .insert({ id: eventId, event_type: eventType });
+
+  // Duplicidade em corrida concorrente é aceitável.
+  if (error && error.code !== "23505") {
+    console.error("[webhook] Erro ao registrar evento processado:", error);
   }
 }

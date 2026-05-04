@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FAQItem {
   question: string;
@@ -122,22 +123,37 @@ export default function FAQPage() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-20 space-y-4">
-            <h1 className="text-5xl md:text-6xl font-black uppercase text-white tracking-tighter">
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-5xl md:text-6xl font-black uppercase text-white tracking-tighter"
+            >
               Perguntas <span className="text-ruby">Frequentes</span>
-            </h1>
-            <p className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto">
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-white/70 text-lg md:text-xl max-w-2xl mx-auto"
+            >
               Encontre respostas sobre como usar o Spotlight, seja você um cliente ou gestor de eventos
-            </p>
+            </motion.p>
           </div>
 
           {/* FAQ Sections */}
           <div className="space-y-8">
-            {faqData.map((section) => {
+            {faqData.map((section, sIdx) => {
               const sectionId = section.title.toLowerCase().replace(/\s+/g, "-");
               const isOpen = openSection === sectionId;
 
               return (
-                <div key={section.title} className="space-y-6">
+                <motion.div 
+                  key={section.title} 
+                  className="space-y-6"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * sIdx }}
+                >
                   {/* Section Header */}
                   <div className="flex items-center gap-4 mb-8 cursor-pointer p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all"
                        onClick={() => setOpenSection(isOpen ? null : sectionId)}>
@@ -154,42 +170,60 @@ export default function FAQPage() {
                   </div>
 
                   {/* FAQ Items */}
-                  {isOpen && (
-                    <div className="space-y-4 pl-0 md:pl-12">
-                      {section.items.map((item, idx) => {
-                        const itemId = `${sectionId}-${idx}`;
-                        const itemOpen = openItems[itemId];
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="space-y-4 pl-0 md:pl-12 overflow-hidden"
+                      >
+                        {section.items.map((item, idx) => {
+                          const itemId = `${sectionId}-${idx}`;
+                          const itemOpen = openItems[itemId];
 
-                        return (
-                          <div
-                            key={itemId}
-                            className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-white/20"
-                          >
-                            <button
-                              onClick={() => toggleItem(itemId)}
-                              className="w-full p-6 flex items-center justify-between text-left hover:bg-white/5 transition-all"
+                          return (
+                            <div
+                              key={itemId}
+                              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition-all hover:border-white/20"
                             >
-                              <h3 className="font-bold text-white text-lg tracking-tight pr-4 flex-1">
-                                {item.question}
-                              </h3>
-                              <ChevronDown className={`w-5 h-5 text-ruby transition-transform flex-shrink-0 ${
-                                itemOpen ? 'rotate-180' : ''
-                              }`} />
-                            </button>
+                              <button
+                                onClick={() => toggleItem(itemId)}
+                                className="w-full p-6 flex items-center justify-between text-left hover:bg-white/5 transition-all"
+                              >
+                                <h3 className="font-bold text-white text-lg tracking-tight pr-4 flex-1">
+                                  {item.question}
+                                </h3>
+                                <ChevronDown className={`w-5 h-5 text-ruby transition-transform flex-shrink-0 ${
+                                  itemOpen ? 'rotate-180' : ''
+                                }`} />
+                              </button>
 
-                            {itemOpen && (
-                              <div className="px-6 pb-6 pt-2 border-t border-white/5 bg-white/2">
-                                <p className="text-white/80 leading-relaxed text-sm md:text-base">
-                                  {item.answer}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                              <AnimatePresence>
+                                {itemOpen && (
+                                  <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="px-6 pb-6 pt-2 border-t border-white/5 bg-white/2">
+                                      <p className="text-white/80 leading-relaxed text-sm md:text-base">
+                                        {item.answer}
+                                      </p>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               );
             })}
           </div>
@@ -201,7 +235,7 @@ export default function FAQPage() {
               Entre em contato conosco através do formulário de suporte
             </p>
             <a
-              href="/login"
+              href="/reportar-problema"
               className="inline-block px-8 py-4 bg-ruby hover:bg-ruby/90 text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl transition-all active:scale-95"
             >
               Abrir Suporte

@@ -312,7 +312,7 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
   const getError = (field: string) => errors.find(e => e.field === field)?.message;
 
   return (
-    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className="p-8 w-full h-full animate-in fade-in duration-500 overflow-y-auto font-sans bg-transparent text-foreground">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col items-center text-center mb-12 gap-8">
           <div className="flex flex-col items-center">

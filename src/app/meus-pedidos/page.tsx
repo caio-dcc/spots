@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Footer } from "@/components/Footer";
 import { RefundModal } from "@/components/client/RefundModal";
@@ -47,19 +47,57 @@ interface Event {
 
 import { motion } from "framer-motion";
 
-export default function MeusPedidosPage() {
+function MeusPedidosContent() {
   const [orders, setOrders] = useState<(Order & { event?: Event })[]>([]);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paidSessionId = searchParams.get("paid");
 
   useEffect(() => {
     checkAuth();
     fetchOrders();
   }, []);
+
+  // Pós-checkout: aguarda o webhook do Stripe marcar o pedido como 'paid'.
+  // O usuário cai aqui direto do Stripe; o webhook pode levar alguns segundos.
+  useEffect(() => {
+    if (!paidSessionId) return;
+    let cancelled = false;
+    setConfirmingPayment(true);
+
+    const poll = async () => {
+      for (let i = 0; i < 10; i++) {
+        if (cancelled) return;
+        const { data: ord } = await supabase
+          .from("ticket_orders")
+          .select("status")
+          .eq("stripe_session_id", paidSessionId)
+          .maybeSingle();
+
+        if (ord && (ord.status === "paid" || ord.status === "checked_in")) {
+          if (!cancelled) {
+            await fetchOrders();
+            setConfirmingPayment(false);
+            toast.success("Pagamento confirmado! Seu ingresso está pronto.");
+            // Limpa o ?paid= da URL pra não re-disparar em refresh.
+            router.replace("/meus-pedidos");
+          }
+          return;
+        }
+        await new Promise(r => setTimeout(r, 1500));
+      }
+      if (!cancelled) setConfirmingPayment(false);
+    };
+
+    poll();
+    return () => { cancelled = true; };
+  }, [paidSessionId]);
 
   const checkAuth = async () => {
     try {
@@ -206,7 +244,7 @@ export default function MeusPedidosPage() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 pb-12">
         <div className="space-y-12">
           {/* Header */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4 text-center max-w-2xl mx-auto"
@@ -218,6 +256,13 @@ export default function MeusPedidosPage() {
               Acompanhe seus ingressos e gerencie suas compras
             </p>
           </motion.div>
+
+          {confirmingPayment && (
+            <div className="rounded-xl bg-green-500/10 border border-green-500/30 p-4 flex items-center gap-3 text-green-300 text-sm font-semibold">
+              <Clock className="w-5 h-5 animate-spin" />
+              Confirmando seu pagamento... pode levar alguns segundos.
+            </div>
+          )}
 
           {/* Orders List */}
           {loading ? (
@@ -405,5 +450,13 @@ export default function MeusPedidosPage() {
 
       <Footer accentColor="#810B14" />
     </div>
+  );
+}
+
+export default function MeusPedidosPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <MeusPedidosContent />
+    </Suspense>
   );
 }

@@ -21,15 +21,17 @@ function ConfirmacaoContent() {
     if (!sessionId) { setLoading(false); return; }
 
     const poll = async () => {
-      // Poll até o pedido estar pago (webhook pode demorar alguns segundos)
-      for (let i = 0; i < 8; i++) {
-        const { data: ord } = await supabase
-          .from("ticket_orders")
-          .select("*")
-          .or(`id.eq.${sessionId},stripe_session_id.eq.${sessionId}`)
-          .single();
+      // Detecta formato: UUID (vindo de /meus-pedidos) vs stripe_session_id (vindo do Stripe).
+      const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(sessionId);
 
-        if (ord?.status === "paid") {
+      // Poll até o pedido estar pago (webhook pode demorar alguns segundos).
+      for (let i = 0; i < 8; i++) {
+        const query = supabase.from("ticket_orders").select("*");
+        const { data: ord } = await (isUuid
+          ? query.eq("id", sessionId).maybeSingle()
+          : query.eq("stripe_session_id", sessionId).maybeSingle());
+
+        if (ord && (ord.status === "paid" || ord.status === "checked_in")) {
           setOrder(ord);
 
           const { data: ev } = await supabase

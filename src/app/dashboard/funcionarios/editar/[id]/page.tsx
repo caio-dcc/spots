@@ -27,7 +27,7 @@ export default function EditarFuncionarioPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full w-full bg-zinc-950">
+      <div className="flex items-center justify-center h-full w-full bg-transparent">
         <Loader2 className="w-10 h-10 animate-spin text-ruby" />
       </div>
     );
@@ -35,7 +35,7 @@ export default function EditarFuncionarioPage() {
 
   if (!employee) {
     return (
-      <div className="flex items-center justify-center h-full w-full bg-zinc-950">
+      <div className="flex items-center justify-center h-full w-full bg-transparent">
         <p className="text-zinc-500 font-bold">Funcionário não encontrado.</p>
       </div>
     );

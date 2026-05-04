@@ -120,8 +120,8 @@ export function ModuleNav() {
           })}
         </div>
 
-        {/* Center Logo - Added icon.png next to text */}
-        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 group">
+        {/* Center Logo - Hidden below 1600px to avoid overlap with nav links */}
+        <Link href="/" className="absolute left-1/2 -translate-x-1/2 hidden min-[1600px]:flex items-center gap-3 group">
           <NextImage 
             src="/icon.png" 
             alt="Logo" 

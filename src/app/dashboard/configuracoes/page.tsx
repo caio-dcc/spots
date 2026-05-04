@@ -9,12 +9,14 @@ import { useRouter } from "next/navigation";
 import { LocationForm } from "@/components/LocationForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Building2, MapPin, DollarSign, Users, Plus, Edit2 } from "lucide-react";
+import { Building2, MapPin, DollarSign, Users, Plus, Edit2, Sun } from "lucide-react";
+import { StripeConnectPanel } from "@/components/StripeConnectPanel";
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [saving, setSaving] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPass, setNewUserPass] = useState("");
@@ -27,11 +29,14 @@ export default function ConfiguracoesPage() {
   const [loadingTheaters, setLoadingTheaters] = useState(false);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
-    // O tema já foi aplicado pelo script inline no <head> do layout.
-    // Não precisamos resetar aqui para evitar override do estado salvo.
+    const savedTheme = localStorage.getItem('spotlight_theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      setTheme(savedTheme as 'dark' | 'light');
+    }
   }, []);
 
   const loadProfile = async () => {
@@ -41,6 +46,13 @@ export default function ConfiguracoesPage() {
       setCurrentUserId(user.id);
       setUsername(user.user_metadata?.full_name || "");
       setEmail(user.email || "");
+
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("stripe_account_id")
+        .eq("id", user.id)
+        .single();
+      setStripeAccountId(profileRow?.stripe_account_id ?? null);
 
       // Verificar se sou membro de alguém
       const { data: membership } = await supabase.from('team_members').select('owner_id').eq('member_id', user.id).single();
@@ -111,10 +123,10 @@ export default function ConfiguracoesPage() {
     } catch (err: any) { alert(err.message); } finally { setSaving(false); }
   };
 
-  const toggleDarkMode = () => {
+  const toggleTheme = () => {
     const html = document.documentElement;
-    const isDark = html.getAttribute('data-theme') === 'dark';
-    const newTheme = isDark ? 'light' : 'dark';
+    const currentTheme = html.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     
     html.setAttribute('data-theme', newTheme);
     if (newTheme === 'dark') {
@@ -122,7 +134,12 @@ export default function ConfiguracoesPage() {
     } else {
       html.classList.remove('dark');
     }
-    localStorage.setItem('spotme_dark_mode', String(newTheme === 'dark'));
+    
+    localStorage.setItem('spotlight_theme', newTheme);
+    setTheme(newTheme);
+    // Dispatch event for layout
+    window.dispatchEvent(new CustomEvent('spotlight-theme-change', { detail: newTheme }));
+    toast.success(`Tema ${newTheme === 'dark' ? 'cinematográfico' : 'claro'} ativado!`);
   };
 
   const handleLogout = async () => {
@@ -213,6 +230,24 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
+        {isSudo && (
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
+              Recebimentos (Stripe)
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+              Conecte sua conta para receber o valor líquido das vendas. A divisão com a
+              plataforma é feita automaticamente no pagamento — você não configura chaves
+              secretas aqui.
+            </p>
+            <StripeConnectPanel
+              stripeAccountId={stripeAccountId}
+              compact={!stripeAccountId}
+            />
+          </div>
+        )}
+
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
           <div className="flex justify-between items-center mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-4">
             <div className="flex items-center gap-3">
@@ -297,7 +332,29 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
-        {/* Modo Noturno */}
+        {/* Tema */}
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-ruby/10 flex items-center justify-center text-ruby">
+                <Moon className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">Aparência</h2>
+                <p className="text-xs text-zinc-500 mt-1 font-medium">Alterne entre o tema cinematográfico e o modo claro.</p>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={toggleTheme}
+              variant="outline"
+              className="rounded-xl border-zinc-200 dark:border-zinc-800 font-bold px-6 h-11 flex items-center gap-2 cursor-pointer transition-all active:scale-95 text-zinc-900 dark:text-white"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-zinc-900" />}
+              {theme === 'dark' ? 'Mudar para Tema Claro' : 'Ativar Modo Cinematográfico'}
+            </Button>
+          </div>
+        </div>
 
         {/* Equipe */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
