@@ -3,11 +3,25 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, Ticket, Users, CalendarDays, Save, TrendingUp, DollarSign, Wallet } from "lucide-react";
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Ticket, 
+  Users, 
+  CalendarDays, 
+  Save, 
+  TrendingUp, 
+  DollarSign, 
+  Wallet,
+  Camera,
+  X
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { logAction } from "@/lib/audit";
 import { unmaskCurrency } from "@/lib/masks";
+import { Html5Qrcode } from "html5-qrcode";
+import { useRef } from "react";
 
 export default function EventDetailsPage() {
   const params = useParams();
@@ -20,7 +34,11 @@ export default function EventDetailsPage() {
   const [benefits, setBenefits] = useState<any[]>([]);
   const [artistas, setArtistas] = useState<{ nome: string; cache: string }[]>([]);
   const [guests, setGuests] = useState<any[]>([]);
+  const [additionalExpenses, setAdditionalExpenses] = useState<any[]>([]);
   const [savingDetails, setSavingDetails] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerLoading, setScannerLoading] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   
   // Financial States
   const [soldRegular, setSoldRegular] = useState<number>(0);
@@ -40,7 +58,7 @@ export default function EventDetailsPage() {
       if (evErr) throw evErr;
       setEvent(evData);
       setApproval(evData.public_approval);
-      setDetails(evData.details || "");
+      setDetails(evData.details || evData.additional_details || "");
       setSoldRegular(evData.sold_regular || 0);
       setBenefitSales(evData.benefit_sales || {});
 
@@ -68,7 +86,14 @@ export default function EventDetailsPage() {
         .eq('event_id', eventId)
         .order('name');
       setGuests(guestsData || []);
-      
+
+      // Buscar despesas da tabela additional_expenses (adicionadas via /despesas)
+      const { data: addExpData } = await supabase
+        .from('additional_expenses')
+        .select('*')
+        .eq('event_id', eventId);
+      setAdditionalExpenses(addExpData || []);
+
     } catch (err: any) {
       console.error(err);
       toast.error("Erro ao carregar dados do evento");
@@ -145,6 +170,80 @@ export default function EventDetailsPage() {
     }
   };
 
+  const startScanner = async () => {
+    setIsScannerOpen(true);
+    setScannerLoading(true);
+    
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+        
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          async (decodedText) => {
+            await processQrCheckin(decodedText);
+            stopScanner();
+          },
+          (errorMessage) => {}
+        );
+        setScannerLoading(false);
+      } catch (err) {
+        toast.error("Não foi possível acessar a câmera");
+        setIsScannerOpen(false);
+      }
+    }, 500);
+  };
+
+  const stopScanner = async () => {
+    if (scannerRef.current) {
+      try { await scannerRef.current.stop(); } catch (err) {}
+      scannerRef.current = null;
+    }
+    setIsScannerOpen(false);
+  };
+
+  const processQrCheckin = async (qrCode: string) => {
+    try {
+      // 1. Check if it's a Stripe ticket (UUID)
+      if (/^[0-9a-fA-F-]{32,40}$/.test(qrCode.trim())) {
+        const res = await fetch("/api/tickets/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ qr_code: qrCode }),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data?.valid) {
+          toast.error(data?.error || "Ingresso inválido");
+          return;
+        }
+
+        toast.success(`Check-in confirmado: ${data.order?.buyer_name}`);
+        fetchData(); // Refresh counts
+        return;
+      }
+
+      // 2. Check if it's a manual guest QR
+      if (qrCode.startsWith("spotme_guest_")) {
+        const guestId = qrCode.replace("spotme_guest_", "");
+        const { data: guest } = await supabase.from('guests').select('*').eq('id', guestId).single();
+        if (guest) {
+          await toggleCheckin(guest);
+          return;
+        }
+      }
+
+      toast.error("QR Code não reconhecido");
+    } catch (err) {
+      toast.error("Erro ao validar QR Code");
+    }
+  };
+
   // Ultra-safe parsing helper
   const safeParse = (val: any) => {
     if (val === null || val === undefined || val === '') return 0;
@@ -175,7 +274,10 @@ export default function EventDetailsPage() {
     return acc + safeParse(val);
   }, 0) || 0;
   const totalDiarias = staff?.reduce((acc: number, s: any) => acc + safeParse(s.valor_diaria), 0) || 0;
-  const totalExtras = event?.extra_expenses?.reduce((acc: number, e: any) => acc + safeParse(e.value || e.valor), 0) || 0;
+  // Combina extra_expenses JSONB (legado) + tabela additional_expenses (novo)
+  const totalExtrasLegacy = event?.extra_expenses?.reduce((acc: number, e: any) => acc + safeParse(e.value || e.valor), 0) || 0;
+  const totalExtrasTable = additionalExpenses.reduce((acc: number, e: any) => acc + safeParse(e.amount), 0);
+  const totalExtras = totalExtrasLegacy + totalExtrasTable;
   
   const totalDespesasVariaveis = totalCaches + totalDiarias + totalExtras;
   const lucroPrejuizoEvento = totalReceita - totalDespesasVariaveis;
@@ -342,6 +444,64 @@ export default function EventDetailsPage() {
             {/* Relatórios de Finalização Removidos a pedido do usuário */}
           </section>
 
+          {/* Check-in de Bilheteria (Novo) */}
+          <section className="bg-card rounded-[2.5rem] border border-zinc-200 p-8 shadow-xl">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-ruby/10 flex items-center justify-center text-ruby">
+                  <Ticket className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Check-in de Bilheteria</h2>
+                  <p className="text-xs text-muted-foreground font-bold">Controle de entrada por tipo de ingresso</p>
+                </div>
+              </div>
+              <div className="bg-ruby/10 px-4 py-1 rounded-full">
+                <span className="text-[10px] font-black text-ruby uppercase tracking-widest">
+                  Total: {benefits.reduce((acc, b) => acc + (b.attendance_count || 0), 0)} / {event?.capacity || 0}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {benefits.map((b) => (
+                <div key={b.id} className="p-5 bg-muted/30 rounded-2xl border border-zinc-200 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-foreground text-sm">{b.nome}</p>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Capacidade: {b.quantity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black text-ruby">{b.attendance_count || 0}</p>
+                      <p className="text-[8px] font-black text-muted-foreground uppercase">Presentes</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <Button 
+                      className="w-full md:flex-1 h-10 rounded-xl bg-ruby hover:bg-ruby/90 text-white font-bold cursor-pointer active:scale-95 transition-all gap-2"
+                      onClick={startScanner}
+                    >
+                      <Camera className="w-4 h-4" />
+                      ESCANEAR QR
+                    </Button>
+                  </div>
+                  <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-ruby h-full transition-all duration-500" 
+                      style={{ width: `${Math.min(100, ((b.attendance_count || 0) / b.quantity) * 100)}%` }} 
+                    />
+                  </div>
+                </div>
+              ))}
+              {benefits.length === 0 && (
+                <div className="col-span-full py-8 text-center bg-muted/20 rounded-2xl border-2 border-dashed border-zinc-200">
+                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest italic">Nenhum tipo de ingresso configurado.</p>
+                  <Button variant="link" className="text-ruby text-[10px] font-black uppercase mt-2" onClick={() => router.push(`/dashboard/eventos/editar/${eventId}`)}>Configurar Ingressos</Button>
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Artistas e Atrações List View */}
           {event?.artistas && event.artistas.length > 0 && (
             <section className="bg-card rounded-[2.5rem] border border-zinc-200 p-8 shadow-xl">
@@ -423,25 +583,35 @@ export default function EventDetailsPage() {
             </div>
           </section>
 
-          {/* Despesas Extras List View */}
-          {event?.extra_expenses && event.extra_expenses.length > 0 && (
+          {/* Despesas Extras List View — combina extra_expenses JSONB + additional_expenses table */}
+          {(event?.extra_expenses?.length > 0 || additionalExpenses.length > 0) && (
             <section className="bg-card rounded-[2.5rem] border border-zinc-200 p-8 shadow-xl">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <DollarSign className="w-5 h-5 text-muted-foreground" />
                   <h2 className="text-xl font-bold text-foreground">Despesas Extras</h2>
                 </div>
-                <span className="text-[10px] font-black text-ruby uppercase tracking-widest bg-ruby/10 px-3 py-1 rounded-full">{event.extra_expenses.length} itens</span>
+                <span className="text-[10px] font-black text-ruby uppercase tracking-widest bg-ruby/10 px-3 py-1 rounded-full">
+                  {(event?.extra_expenses?.length || 0) + additionalExpenses.length} itens
+                </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {event.extra_expenses.map((e: any, i: number) => (
-                  <div key={i} className="p-5 bg-muted/30 rounded-2xl border border-zinc-200 flex items-center justify-between group transition-all hover:bg-muted/50">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="font-bold text-foreground text-sm">{e.description}</p>
-                        <p className="text-[9px] font-black text-ruby uppercase tracking-widest">Custo: R$ {Number(e.value).toFixed(2)}</p>
-                      </div>
+                {(event?.extra_expenses || []).map((e: any, i: number) => (
+                  <div key={`legacy-${i}`} className="p-5 bg-muted/30 rounded-2xl border border-zinc-200 flex items-center justify-between group transition-all hover:bg-muted/50">
+                    <div>
+                      <p className="font-bold text-foreground text-sm">{e.description}</p>
+                      <p className="text-[9px] font-black text-ruby uppercase tracking-widest">Custo: R$ {Number(e.value || e.valor || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+                {additionalExpenses.map((e: any) => (
+                  <div key={e.id} className="p-5 bg-muted/30 rounded-2xl border border-zinc-200 flex items-center justify-between group transition-all hover:bg-muted/50">
+                    <div>
+                      <p className="font-bold text-foreground text-sm">{e.description}</p>
+                      <p className="text-[9px] font-black text-ruby uppercase tracking-widest">
+                        {e.category && <span>{e.category} • </span>}Custo: R$ {Number(e.amount || 0).toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -453,8 +623,8 @@ export default function EventDetailsPage() {
           <section className="bg-card rounded-[2.5rem] border border-zinc-200 p-8 shadow-xl">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <Ticket className="w-5 h-5 text-muted-foreground" />
-                <h2 className="text-xl font-bold text-foreground">Lista de Convidados</h2>
+                <Users className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-xl font-bold text-foreground">Lista VIP / Convidados</h2>
               </div>
               <div className="flex flex-col items-end">
                 <span className="text-[10px] font-black text-ruby uppercase tracking-widest bg-ruby/10 px-3 py-1 rounded-full">
@@ -500,6 +670,48 @@ export default function EventDetailsPage() {
 
         </div>
       </div>
+
+      {/* Overlay do Scanner */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="w-full max-w-md space-y-8">
+            <div className="flex justify-between items-center text-white">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-ruby" />
+                <span className="font-black tracking-widest uppercase text-xs">Validar QR Code</span>
+              </div>
+              <Button 
+                variant="ghost" 
+                onClick={stopScanner}
+                className="text-white hover:bg-white/10 rounded-full h-10 w-10 p-0 cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+
+            <div className="relative aspect-square w-full bg-zinc-900 rounded-3xl overflow-hidden border-2 border-ruby/50 shadow-[0_0_50px_rgba(224,30,55,0.2)]">
+              {scannerLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                  <Loader2 className="w-8 h-8 animate-spin text-ruby" />
+                </div>
+              )}
+              <div id="reader" className="w-full h-full"></div>
+              
+              {/* Moldura de Foco */}
+              <div className="absolute inset-0 pointer-events-none border-[40px] border-black/40">
+                <div className="w-full h-full border-2 border-ruby/30 relative">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-ruby"></div>
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-ruby"></div>
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-ruby"></div>
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-ruby"></div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-zinc-500 text-center text-sm font-medium uppercase tracking-widest font-black">Aponte para o QR Code</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

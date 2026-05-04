@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, ChevronLeft, ChevronRight, Send, Loader2, Edit2, X, Trash2, AlertTriangle, Eye } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Send, Loader2, Edit2, X, Trash2, AlertTriangle, Eye, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -163,6 +163,14 @@ export default function ListarFuncionariosPage() {
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Funcionários</h1>
           <p className="text-zinc-500 mt-1 font-medium">Quadro de colaboradores do evento.</p>
         </div>
+        
+        <Button 
+          onClick={() => router.push('/dashboard/funcionarios/cadastrar')}
+          className="w-full md:w-auto bg-ruby hover:bg-ruby/90 text-white font-black uppercase tracking-widest text-[10px] h-12 px-8 rounded-2xl shadow-lg shadow-ruby/20 transition-all active:scale-95 cursor-pointer flex items-center gap-2"
+        >
+          <Users className="w-4 h-4" />
+          Adicionar Funcionário
+        </Button>
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6 w-full">

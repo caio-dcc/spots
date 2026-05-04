@@ -58,7 +58,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!authenticated || !authorized) return null;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background font-sans relative text-foreground">
+    <div className="flex h-screen w-full overflow-hidden bg-background font-sans relative text-foreground flex-col md:flex-row">
+      {/* Mobile Header - High Z-Index to stay above sidebar */}
+      <header className="h-24 border-b border-white/10 bg-black flex items-center px-4 md:hidden shrink-0 z-[11000] shadow-lg sticky top-0 w-full">
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 -ml-2 text-white/80 hover:text-white rounded-md transition-colors active:scale-95 cursor-pointer relative z-[11001]"
+        >
+          {isSidebarOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+        </button>
+        <div className="flex-1 flex flex-col items-center justify-center -ml-8">
+           <img src="/spotlight-nobg.png" alt="Spotlight" className="h-14 w-auto object-contain" />
+           <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] -mt-1">Modo Casa</span>
+        </div>
+      </header>
+
       {/* Sidebar - Desktop static, Mobile absolute/sliding */}
       <div className={`
         fixed inset-y-0 left-0 z-[9999] md:z-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0
@@ -69,22 +83,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto relative flex flex-col min-w-0 z-10">
-        {/* Mobile Header */}
-        <header className="h-20 border-b border-zinc-200 bg-zinc-900 flex items-center px-4 md:hidden shrink-0 z-20">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSidebarOpen(!isSidebarOpen);
-            }}
-            className="p-2 -ml-2 text-zinc-400 hover:border-zinc-200 rounded-md transition-colors active:scale-95"
-          >
-            {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-          <div className="flex-1 flex justify-center -ml-8">
-             <img src="/spotlight-nobg.png" alt="Spotlight" className="h-16 w-auto object-contain" />
-          </div>
-        </header>
-
         {/* Backdrop for mobile */}
         {isSidebarOpen && (
           <div 

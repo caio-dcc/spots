@@ -32,20 +32,14 @@ export default function CalendarioPage() {
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
     const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
     try {
-      // Buscar teatro pelo slug
-      const { data: theater } = await supabase
-        .from('theaters')
-        .select('id')
-        .or(`slug.eq.${slug},slug.eq.teatro-${slug}`)
-        .single();
-      
-      if (!theater) return;
+      const { getContextUserId } = await import("@/lib/auth-context");
+      const userId = await getContextUserId();
+      if (!userId) return;
 
-      // 1. Buscar Eventos com campos extras
       const { data: evs, error } = await supabase
         .from('events')
         .select('id, title, event_date, produtor, artistas, category')
-        .eq('theater_id', theater.id)
+        .eq('user_id', userId)
         .is('deleted_at', null)
         .gte('event_date', start)
         .lte('event_date', end)

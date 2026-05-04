@@ -164,10 +164,13 @@ export default function DashboardPage() {
 
       const mEventIds = monthEventsData.map(e => e.id);
       
-      // Calcular Cachês de Artistas
+      // Calcular Cachês de Artistas — lê cache, fee e valor para cobrir todos os formatos
       const totalArtistFees = monthEventsData.reduce((acc: any, event: any) => {
         const eventArtists = Array.isArray(event.artistas) ? event.artistas : [];
-        const eventFees = eventArtists.reduce((sum: number, a: any) => sum + (Number(a.fee) || 0), 0);
+        const eventFees = eventArtists.reduce((sum: number, a: any) => {
+          if (!a || typeof a === 'string') return sum;
+          return sum + (Number(a.cache) || Number(a.fee) || Number(a.valor) || 0);
+        }, 0);
         return acc + eventFees;
       }, 0) || 0;
       expensesCurrent += totalArtistFees;
@@ -271,7 +274,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, selectedYear, filters]);
 
   const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -444,7 +447,7 @@ export default function DashboardPage() {
                      <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 12}} dy={10} />
                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 12}} dx={-10} />
                      <Tooltip cursor={{stroke: '#e4e4e7', strokeWidth: 2}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                     <Line type="monotone" dataKey="valor" stroke="#9B111E" strokeWidth={3} dot={{r: 4, fill: '#9B111E'}} activeDot={{r: 6}} />
+                     <Line type="monotone" dataKey="valor" stroke="#810B14" strokeWidth={3} dot={{r: 4, fill: '#810B14'}} activeDot={{r: 6}} />
                    </LineChart>
                  </ResponsiveContainer>
                </>
@@ -478,7 +481,7 @@ export default function DashboardPage() {
                      <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 12}} dy={10} />
                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#71717a', fontSize: 12}} dx={-10} />
                      <Tooltip cursor={{fill: '#f4f4f5'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                     <Bar dataKey="quantidade" fill="#18181b" radius={[4, 4, 0, 0]} />
+                     <Bar dataKey="quantidade" fill="#810B14" radius={[4, 4, 0, 0]} />
                    </BarChart>
                  </ResponsiveContainer>
                </>
@@ -516,7 +519,7 @@ export default function DashboardPage() {
                         contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
                         formatter={(value: any, name: any, props: any) => [`${value}%`, `Aplausos: ${props.payload.title}`]}
                      />
-                     <Line type="monotone" dataKey="valor" stroke="#9B111E" strokeWidth={4} dot={{r: 6, fill: '#9B111E', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} />
+                     <Line type="monotone" dataKey="valor" stroke="#810B14" strokeWidth={4} dot={{r: 6, fill: '#810B14', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} />
                    </LineChart>
                  </ResponsiveContainer>
                </>

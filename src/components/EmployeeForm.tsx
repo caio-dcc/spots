@@ -35,16 +35,8 @@ export function EmployeeForm({ initialData, isEdit }: EmployeeFormProps) {
   const [isFreelancer, setIsFreelancer] = useState(!initialData?.is_contracted);
   const [salary, setSalary] = useState(initialData?.salary?.toString() || "");
   const [status, setStatus] = useState(initialData?.status || "ativo");
-  const [theaterId, setTheaterId] = useState(initialData?.theater_id || "");
-  const [theaters, setTheaters] = useState<any[]>([]);
 
-  useEffect(() => {
-    async function fetchTheaters() {
-      const { data } = await supabase.from('theaters').select('id, name');
-      if (data) setTheaters(data);
-    }
-    fetchTheaters();
-  }, []);
+
 
   const handleSave = async () => {
     const validationErrors = validateEmployee({ nome, cpf, telefone, cargo, departamento });
@@ -64,7 +56,6 @@ export function EmployeeForm({ initialData, isEdit }: EmployeeFormProps) {
 
       const payload = {
         user_id: userId,
-        theater_id: theaterId || null,
         nome,
         cpf,
         telefone,
@@ -172,7 +163,7 @@ export function EmployeeForm({ initialData, isEdit }: EmployeeFormProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1 block pb-2">Cargo *</label>
                   <Input 
@@ -202,19 +193,7 @@ export function EmployeeForm({ initialData, isEdit }: EmployeeFormProps) {
                   {getError('departamento') && <p className="text-xs text-red-500 mt-1 ml-1">{getError('departamento')}</p>}
                 </div>
 
-                <div>
-                  <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1 block pb-2">Local Base (Theater)</label>
-                  <select 
-                    className="flex h-14 w-full rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-6 text-sm font-medium cursor-pointer focus:ring-2 focus:ring-ruby outline-none transition-all text-zinc-900 dark:text-white shadow-sm"
-                    value={theaterId}
-                    onChange={e => setTheaterId(e.target.value)}
-                  >
-                    <option value="">Nenhum local específico</option>
-                    {theaters.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
+
               </div>
               
 

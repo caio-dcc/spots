@@ -1,99 +1,138 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
-import { FeaturesSection } from "@/components/FeaturesSection";
 import { BlurText } from "@/components/ui/BlurText";
-import { ArrowRight, Zap, Shield } from "lucide-react";
+import { 
+  Check
+} from "lucide-react";
+import { EventMosaic } from "@/components/EventMosaic";
+import { FeaturesSection } from "@/components/FeaturesSection";
 
 export default function HomePage() {
-  return (
-    <div className="flex-1 w-full flex flex-col relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(124,58,237,0.05),transparent_70%)]" />
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 py-32 px-8">
-        <div className="w-full flex flex-col md:flex-row items-center justify-center gap-16 md:gap-32 max-w-7xl">
-          <div className="flex-1 text-center md:text-left max-w-2xl space-y-8">
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      setAuthChecked(true);
+    });
+
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      setAuthChecked(true);
+    };
+    checkAuth();
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return (
+    <div className="flex-1 w-full flex flex-col relative bg-black selection:bg-ruby selection:text-white">
+      {/* Hero Section */}
+      <main className="relative min-h-screen flex flex-col justify-center px-8 md:px-20 overflow-hidden py-20 md:py-32">
+        {/* Background Image with Cinematic Lighting */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/bailarina.png" 
+            alt="Hero Background" 
+            className="w-full h-full object-cover object-[center_30%] opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left Column: Content */}
+          <div className="space-y-8 transition-all duration-700 order-2 lg:order-1">
+            <div className="flex items-center gap-2 text-white/70">
+              <Check className="w-4 h-4 text-ruby" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Plataforma Profissional</span>
+            </div>
+
             <BlurText
-              text="Problemas com gestão de seus eventos?"
-              className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-white leading-none"
+              text="Gestão de Eventos, Shows e Bilheteria para Produtores Culturais"
+              className="text-4xl md:text-7xl font-black text-white tracking-tighter leading-[0.9] uppercase break-words"
               delay={50}
               animateBy="words"
               direction="bottom"
             />
-            
-            <p className="text-zinc-500 text-lg md:text-xl font-medium leading-relaxed max-w-lg">
-              Deixe o caos das planilhas para trás. O <span className="text-white">Spotlight</span> centraliza sua operação, equipe e bilheteria em uma única interface inteligente e poderosa.
+
+            <p className="text-white/60 text-lg md:text-xl font-medium leading-relaxed max-w-lg">
+              A <span className="text-white">Spotlight</span> é a ferramenta definitiva para organizadores de eventos. Tenha o <span className="text-white">controle total de freelancers, diárias e staff</span> em um fluxo profissional e integrado.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white text-xs font-black uppercase tracking-widest">Tempo Real</span>
-                  <span className="text-zinc-500 text-[10px]">Controle instantâneo</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-white text-xs font-black uppercase tracking-widest">Segurança</span>
-                  <span className="text-zinc-500 text-[10px]">Dados protegidos</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-8 flex flex-wrap gap-4 justify-center md:justify-start">
-              <Link href="/login">
-                <button className="px-10 py-5 rounded-2xl border border-white/10 text-white font-black uppercase text-xs tracking-[0.2em] transition-all hover:bg-white/5 cursor-pointer flex items-center justify-center group">
-                  <span className="relative z-10">Acessar Spotlight</span>
-                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+            <div className="flex flex-col sm:flex-row gap-4">
+              {authChecked && !isLoggedIn && (
+                <Link href="/login" className="w-full sm:w-auto">
+                  <button className="w-full px-10 py-5 rounded-full bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-zinc-200 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
+                    Registrar-se
+                  </button>
+                </Link>
+              )}
+              <Link href="/mosaico-eventos" className="w-full sm:w-auto">
+                <button className="w-full px-10 py-5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-white/20 cursor-pointer active:scale-95">
+                  Ver Eventos
                 </button>
               </Link>
-              
-              <button className="px-10 py-5 rounded-2xl border border-white/10 text-white font-black uppercase text-xs tracking-[0.2em] transition-all hover:bg-white/5 cursor-pointer">
-                Solicitar demonstração
-              </button>
             </div>
           </div>
 
-          {/* Circle Text Column (Spinner) */}
-          <div className="relative w-[375px] h-[375px] flex items-center justify-center group shrink-0">
-            <div className="absolute inset-0 animate-[spin_20s_linear_infinite] group-hover:pause">
-              <svg viewBox="0 0 375 375" className="w-full h-full">
-                <path
-                  id="circlePath"
-                  d="M 187.5, 187.5 m -137.5, 0 a 137.5,137.5 0 1,1 275,0 a 137.5,137.5 0 1,1 -275,0"
-                  fill="transparent"
+          {/* Right Column: Spinner */}
+          <div className="relative flex items-center justify-center order-1 lg:order-2 h-[300px] md:h-[500px]">
+            <div className="relative w-[280px] h-[280px] md:w-[420px] md:h-[420px] flex items-center justify-center opacity-80 pointer-events-none transition-all duration-700">
+              {/* Circular Text Spinner */}
+              <div className="absolute inset-0 animate-[spin_30s_linear_infinite]">
+                <svg viewBox="0 0 490 490" className="w-full h-full">
+                  <path
+                    id="circlePathHero"
+                    d="M 245, 245 m -180, 0 a 180,180 0 1,1 360,0 a 180,180 0 1,1 -360,0"
+                    fill="transparent"
+                  />
+                  <text className="fill-white text-[24px] font-black uppercase tracking-[0.4em]">
+                    <textPath xlinkHref="#circlePathHero">
+                      Spotlight • Cultura • Arte • Gestão • Bilheteria • 
+                    </textPath>
+                  </text>
+                </svg>
+              </div>
+              
+              {/* Central Logo */}
+              <div className="relative z-20 flex items-center justify-center">
+                <img 
+                  src="/icon.png" 
+                  alt="Spotlight Icon Center" 
+                  className="w-[130px] h-[130px] md:w-[260px] md:h-[260px] object-contain brightness-150 drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]"
                 />
-                <text className="fill-white/50 text-[28px] font-black uppercase tracking-[0.2em]">
-                  <textPath xlinkHref="#circlePath">
-                    Praticidade • gera • produtividade
-                  </textPath>
-                </text>
-              </svg>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="relative z-10 flex items-center justify-center">
-              <img
-                src="/icon.png"
-                alt="Spotlight Icon"
-                className="w-[194px] h-[194px] object-contain opacity-90 group-hover:opacity-100 transition-all drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]"
-              />
-            </div>
+        {/* Bottom Stats Bar - Centered and Separator removed */}
+        <div className="relative md:absolute md:bottom-12 left-0 md:left-0 right-0 md:right-0 z-20 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-24 pt-10 md:pt-12 mt-20 md:mt-0 px-8 md:px-0">
+          <div className="space-y-1 text-center">
+            <p className="text-white text-lg md:text-xl font-black tracking-tight">Tempo Real</p>
+            <p className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Controle instantâneo</p>
+          </div>
+          <div className="space-y-1 text-center">
+            <p className="text-white text-lg md:text-xl font-black tracking-tight">Segurança</p>
+            <p className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Dados protegidos</p>
           </div>
         </div>
       </main>
 
+      {/* Rest of the content - Background set to black explicitly */}
+      <div className="bg-black relative z-10">
+        <FeaturesSection />
+        <EventMosaic />
+      </div>
 
-      <FeaturesSection />
-      <Footer accentColor="#8B5CF6" />
+      <Footer accentColor="#810B14" />
     </div>
   );
 }

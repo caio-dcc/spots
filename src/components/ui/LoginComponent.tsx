@@ -38,7 +38,7 @@ const AppInput = (props: InputProps) => {
       }
       <div className="relative w-full">
         <input
-          className="peer relative z-10 border-2 border-white/20 h-14 w-full rounded-2xl bg-white/10 backdrop-blur-sm px-6 font-bold text-white outline-none transition-all duration-200 ease-in-out focus:bg-white/15 focus:border-white/60 placeholder:text-white/50 placeholder:font-medium"
+          className="peer relative z-10 !border-white/20 h-14 w-full rounded-2xl !bg-black/40 backdrop-blur-sm px-6 font-bold !text-white outline-none transition-all duration-200 ease-in-out focus:bg-white/15 focus:border-white/60 placeholder:text-white/70 placeholder:font-medium"
           placeholder={placeholder}
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setIsHovering(true)}
@@ -80,6 +80,8 @@ interface LoginComponentProps {
     onSubmit?: (email: string, pass: string) => void;
     loading?: boolean;
     forgotPasswordHref?: string;
+    logo?: string;
+    description?: string;
 }
 
 const LoginComponent = ({ 
@@ -90,7 +92,9 @@ const LoginComponent = ({
     accentRGB = "155, 17, 30",
     onSubmit,
     loading = false,
-    forgotPasswordHref = "/esqueci-senha"
+    forgotPasswordHref = "/esqueci-senha",
+    logo,
+    description
 }: LoginComponentProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -138,7 +142,7 @@ const LoginComponent = ({
 
   return (
     <div className="w-full max-w-5xl flex items-center justify-center p-4" style={{ '--color-accent': accentColor, '--color-accent-rgb': accentRGB } as any}>
-    <div className='w-full flex justify-between h-[650px] bg-transparent rounded-[3.5rem] overflow-hidden border border-transparent'>
+    <div className='w-full flex justify-between h-[650px] bg-zinc-950/30 backdrop-blur-xl rounded-[3.5rem] overflow-hidden border border-white/10 shadow-2xl shadow-black/50'>
       <div
         className='w-full lg:w-1/2 px-8 lg:px-16 h-full relative overflow-hidden'
         onMouseMove={handleMouseMove}
@@ -156,13 +160,24 @@ const LoginComponent = ({
           />
           <div className="h-full z-10 flex flex-col justify-center py-10">
             <form className='grid gap-8' onSubmit={handleSubmit}>
-              <div className='grid gap-4 mb-2'>
-                <h1 className='text-4xl font-black text-white tracking-tighter uppercase'>{title}</h1>
-                <span className='text-[10px] font-black uppercase tracking-[0.2em] text-white/40'>Gestão Operacional de Teatros, Shows e Concertos de forma analítica e personalizada</span>
+              <div className='flex flex-col items-center gap-4 mb-6'>
+                {logo ? (
+                  <div className="relative h-[200px] w-[200px]">
+                    <Image src={logo} alt="Logo" fill className="object-contain" />
+                  </div>
+                ) : (
+                  <h1 className='text-4xl font-black text-white tracking-tighter uppercase text-center'>{title}</h1>
+                )}
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <span className='text-ruby font-black uppercase tracking-[0.3em] text-xs'>{subtitle}</span>
+                  <p className='text-[10px] font-bold text-white/50 uppercase tracking-widest leading-relaxed max-w-xs'>
+                    {description || 'Gestão Operacional de Teatros, Shows e Concertos de forma analítica e personalizada'}
+                  </p>
+                </div>
               </div>
               <div className='grid gap-6'>
                 <AppInput 
-                    placeholder="Email" 
+                    placeholder="E-mail" 
                     type="email" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -176,7 +191,7 @@ const LoginComponent = ({
                         onChange={(e) => setPassword(e.target.value)}
                         icon={<Lock size={18} />}
                     />
-                    <Link href={forgotPasswordHref} className='text-[11px] font-black text-white/40 uppercase tracking-widest hover:text-white transition-colors text-right px-1'>Esqueci minha senha</Link>
+                    <Link href={forgotPasswordHref} className='text-[11px] font-black text-white/60 uppercase tracking-widest hover:text-white transition-colors text-right px-1 mt-[10px]'>Esqueci minha senha</Link>
                 </div>
               </div>
               
@@ -201,8 +216,8 @@ const LoginComponent = ({
           </div>
         </div>
         <div className='hidden lg:block w-1/2 h-full overflow-hidden relative group'>
-            <div className="absolute inset-0 bg-[var(--color-accent)]/20 z-10 mix-blend-overlay group-hover:opacity-0 transition-opacity duration-700" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent z-10" />
+            <div className="absolute inset-0 bg-[var(--color-accent)]/10 z-10 mix-blend-overlay group-hover:opacity-0 transition-opacity duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent z-10" />
             <Image
               src={image}
               width={1000}
@@ -210,7 +225,7 @@ const LoginComponent = ({
               priority
               unoptimized
               alt="Login background"
-              className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-40"
+              className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-70"
             />
        </div>
     </div>

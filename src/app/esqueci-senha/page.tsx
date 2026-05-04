@@ -1,102 +1,137 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mail, KeyRound, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { Mail, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-export default function EsqueciSenhaPage() {
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState("");
-  const [newPass, setNewPass] = useState("");
-  const [confirmPass, setConfirmPass] = useState("");
-  const [loading, setLoading] = useState(false);
+interface InputProps {
+  placeholder?: string;
+  type?: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  [key: string]: any;
+}
 
-  const handleSendCode = async () => {
-    if (!email) return alert("Preencha seu e-mail");
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/esqueci-senha?step=3`,
-      });
-      if (error) throw error;
-      alert("E-mail de recuperação enviado! Verifique sua caixa de entrada (e spam).");
-      setStep(2);
-    } catch (err: any) { alert(err.message || "Erro ao enviar e-mail."); } finally { setLoading(false); }
-  };
+const AppInput = ({ placeholder, type = "text", ...rest }: InputProps) => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
 
-  const handleResetPassword = async () => {
-    if (newPass !== confirmPass) return alert("As senhas não coincidem.");
-    if (newPass.length < 6) return alert("A senha deve ter no mínimo 6 caracteres.");
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPass });
-      if (error) throw error;
-      alert("Senha alterada com sucesso! Você já pode fazer login.");
-      window.location.href = "/";
-    } catch (err: any) { alert(err.message || "Erro ao alterar senha."); } finally { setLoading(false); }
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-zinc-100 p-8 animate-in fade-in zoom-in-95 duration-500">
-        <Link href="/" className="inline-flex items-center text-sm font-medium text-zinc-500 hover:text-ruby mb-6 transition-colors"><ArrowLeft className="w-4 h-4 mr-1" />Voltar para Login</Link>
+    <div className="relative w-full">
+      <input
+        className="peer relative z-10 h-14 w-full rounded-2xl border border-white/20 bg-zinc-900 px-6 font-bold text-white outline-none backdrop-blur-sm transition-all duration-200 ease-in-out focus:border-white/60 focus:bg-zinc-800 placeholder:font-medium placeholder:text-white/70 [color-scheme:dark]"
+        placeholder={placeholder}
+        type={type}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        {...rest}
+      />
+      {isHovering && (
+        <div
+          className="absolute bottom-0 left-0 right-0 h-[2px] overflow-hidden rounded-b-md pointer-events-none z-20"
+          style={{
+            background: `radial-gradient(30px circle at ${mousePosition.x}px 2px, #810B14 0%, transparent 70%)`,
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-ruby/10 text-ruby rounded-full flex items-center justify-center mx-auto mb-4"><Mail className="w-6 h-6" /></div>
-              <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Esqueci minha senha</h1>
-              <p className="text-sm text-zinc-500 mt-2">Digite o e-mail cadastrado para receber um link de recuperação.</p>
-            </div>
-            <div className="space-y-4">
-              <div><label className="text-sm font-semibold text-zinc-700 pb-1.5 block">E-mail</label><Input type="email" placeholder="seu@email.com" className="bg-zinc-50 h-12 text-base" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendCode()} /></div>
-              <Button onClick={handleSendCode} disabled={loading} className="w-full bg-ruby hover:bg-ruby/90 text-white h-12 text-base font-semibold cursor-pointer">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}{loading ? "Enviando..." : "Enviar Link de Recuperação"}
-              </Button>
-            </div>
-          </div>
-        )}
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
-        {step === 2 && (
-          <div className="space-y-6 animate-in slide-in-from-right-4">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-ruby/10 text-ruby rounded-full flex items-center justify-center mx-auto mb-4"><KeyRound className="w-6 h-6" /></div>
-              <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Verifique seu E-mail</h1>
-              <p className="text-sm text-zinc-500 mt-2">Enviamos um link de recuperação para <strong>{email}</strong>. Clique no link para definir sua nova senha.</p>
-            </div>
-            <div className="space-y-4">
-              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm text-zinc-600">
-                <p className="font-semibold mb-1">Não recebeu?</p>
-                <p>Verifique a pasta de spam ou clique abaixo para reenviar.</p>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/resetar-senha`,
+      });
+
+      if (err) throw err;
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err.message || "Erro ao solicitar reset de senha");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="flex-1 w-full flex flex-col relative overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-ruby/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-zinc-900/10 blur-[120px] rounded-full" />
+        <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10">
+          <div className="w-full max-w-md px-6">
+            <div className="bg-zinc-950/50 backdrop-blur-xl rounded-3xl border border-white/10 p-12 text-center">
+              <div className="mb-6 flex justify-center">
+                <div className="bg-ruby/20 rounded-full p-4">
+                  <Mail className="w-8 h-8 text-ruby" />
+                </div>
               </div>
-              <Button onClick={handleSendCode} disabled={loading} variant="outline" className="w-full h-12 text-base font-semibold cursor-pointer">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}Reenviar E-mail
-              </Button>
-              <button onClick={() => setStep(1)} className="w-full text-sm font-semibold text-zinc-500 hover:text-zinc-800 text-center cursor-pointer">Tentar outro e-mail</button>
+              <h1 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Email Enviado</h1>
+              <p className="text-white/70 text-sm mb-6">Verificamos seu email em nosso sistema. Se a conta existe, você receberá um link para resetar sua senha em breve.</p>
+              <p className="text-white/50 text-xs mb-8">O link expira em 24 horas. Verifique sua pasta de spam se não receber.</p>
+              <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-ruby text-white font-black text-xs uppercase tracking-wider rounded-xl hover:bg-ruby/90 transition-all">
+                <ArrowLeft className="w-4 h-4" />
+                Voltar para Login
+              </Link>
             </div>
           </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-6 animate-in slide-in-from-right-4">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle2 className="w-6 h-6" /></div>
-              <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Nova Senha</h1>
-              <p className="text-sm text-zinc-500 mt-2">Crie uma nova senha segura para acessar seu painel.</p>
-            </div>
-            <div className="space-y-4">
-              <div><label className="text-sm font-semibold text-zinc-700 pb-1.5 block">Nova Senha</label><Input type="password" placeholder="Mínimo 6 caracteres" className="bg-zinc-50 h-12" value={newPass} onChange={e => setNewPass(e.target.value)} /></div>
-              <div><label className="text-sm font-semibold text-zinc-700 pb-1.5 block">Repetir Nova Senha</label><Input type="password" placeholder="Repita a senha" className="bg-zinc-50 h-12" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleResetPassword()} /></div>
-              <Button onClick={handleResetPassword} disabled={loading} className="w-full bg-ruby hover:bg-ruby/90 text-white h-12 text-base font-semibold cursor-pointer mt-2">
-                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}{loading ? "Salvando..." : "Salvar Nova Senha"}
-              </Button>
-            </div>
-          </div>
-        )}
+        </main>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 w-full flex flex-col relative overflow-hidden">
+      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-ruby/10 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-zinc-900/10 blur-[120px] rounded-full" />
+      <main className="flex-1 w-full flex flex-col items-center justify-center relative z-10 px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="bg-zinc-950/50 backdrop-blur-xl rounded-3xl border border-white/10 p-8 sm:p-12">
+            <Link href="/login" className="inline-flex items-center gap-2 text-white/60 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors mb-8">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
+            </Link>
+            <div className="mb-8">
+              <h1 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Esqueci minha Senha</h1>
+              <p className="text-white/50 text-sm">Digite seu email para receber um link de recuperação</p>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-white/60 mb-2 ml-1">Email</label>
+                <AppInput placeholder="seu@email.com" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
+              </div>
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                  <p className="text-red-400 text-xs font-bold">{error}</p>
+                </div>
+              )}
+              <button type="submit" disabled={loading || !email} className="group relative w-full inline-flex justify-center items-center overflow-hidden rounded-2xl bg-ruby px-8 py-4 text-xs font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-ruby/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Enviar Link</span>}
+              </button>
+              <p className="text-center text-xs text-white/40">
+                Lembrou sua senha? <Link href="/login" className="text-ruby hover:text-ruby/80 font-bold">Fazer Login</Link>
+              </p>
+            </form>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

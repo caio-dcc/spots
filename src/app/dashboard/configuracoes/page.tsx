@@ -6,10 +6,15 @@ import { Input } from "@/components/ui/input";
 import { LogOut, Save, UserPlus, Shield, Moon, Trash2, Crown, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { LocationForm } from "@/components/LocationForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { Building2, MapPin, DollarSign, Users, Plus, Edit2 } from "lucide-react";
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPass, setNewUserPass] = useState("");
@@ -20,7 +25,8 @@ export default function ConfiguracoesPage() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [theaters, setTheaters] = useState<any[]>([]);
   const [loadingTheaters, setLoadingTheaters] = useState(false);
-  const [newTheaterName, setNewTheaterName] = useState("");
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<any>(null);
 
   useEffect(() => {
     loadProfile();
@@ -31,9 +37,10 @@ export default function ConfiguracoesPage() {
   const loadProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/'); return; }
+       if (!user) { router.push('/'); return; }
       setCurrentUserId(user.id);
-      setUsername(user.user_metadata?.full_name || user.email || "Usuário");
+      setUsername(user.user_metadata?.full_name || "");
+      setEmail(user.email || "");
 
       // Verificar se sou membro de alguém
       const { data: membership } = await supabase.from('team_members').select('owner_id').eq('member_id', user.id).single();
@@ -65,16 +72,9 @@ export default function ConfiguracoesPage() {
     setLoadingTheaters(false);
   };
 
-  const handleAddTheater = async () => {
-    if (!newTheaterName.trim()) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { error } = await supabase.from('theaters').insert({ name: newTheaterName.trim(), user_id: user.id });
-      if (error) throw error;
-      setNewTheaterName("");
-      loadTheaters(user.id);
-    } catch (err: any) { alert(err.message); }
+  const handleEditLocation = (loc: any) => {
+    setEditingLocation(loc);
+    setIsLocationDialogOpen(true);
   };
 
   const handleRemoveTheater = async (id: string) => {
@@ -89,13 +89,25 @@ export default function ConfiguracoesPage() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      const { error } = await supabase.auth.updateUser({
+      
+      const updatePayload: any = {
         data: { full_name: username }
-      });
+      };
+
+      if (email !== user.email) {
+        updatePayload.email = email;
+      }
+
+      const { error } = await supabase.auth.updateUser(updatePayload);
       if (error) throw error;
-      alert("Perfil atualizado com sucesso!");
+      
+      if (updatePayload.email) {
+        alert("Perfil atualizado! Um e-mail de confirmação foi enviado para o novo endereço.");
+      } else {
+        alert("Perfil atualizado com sucesso!");
+      }
     } catch (err: any) { alert(err.message); } finally { setSaving(false); }
   };
 
@@ -175,44 +187,111 @@ export default function ConfiguracoesPage() {
             {isSudo && <span className="bg-ruby/10 text-ruby text-xs px-2 py-1 rounded flex items-center gap-1 font-bold"><Crown className="w-3 h-3" />SUDO</span>}
           </h2>
           <div className="space-y-4 max-w-md">
-            <div><label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 pb-1.5 block">Nome de Usuário</label><Input value={username} onChange={e => setUsername(e.target.value)} className="bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white" /></div>
-            <Button onClick={handleSaveProfile} disabled={saving} className="bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}{saving ? "Salvando..." : "Atualizar Perfil"}
+            <div>
+              <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 pb-1.5 block">Nome Completo</label>
+              <Input 
+                value={username} 
+                onChange={e => setUsername(e.target.value)} 
+                placeholder="Seu nome"
+                className="bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white" 
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 pb-1.5 block">E-mail da Conta</label>
+              <Input 
+                type="email"
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                placeholder="email@exemplo.com"
+                className="bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white" 
+              />
+            </div>
+            <Button onClick={handleSaveProfile} disabled={saving} className="bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer h-12 px-6 rounded-xl font-bold shadow-lg shadow-zinc-200">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              {saving ? "Salvando..." : "Atualizar Perfil"}
             </Button>
           </div>
         </div>
 
-        {/* Meus Locais (Teatros) */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-            <Crown className="w-5 h-5 text-zinc-400" />
-            Meus Locais (Theaters)
-          </h2>
-          <p className="text-sm text-zinc-500 mb-6">Cadastre as localidades (teatros, salas, arenas) onde seus eventos acontecem.</p>
-          
-          <div className="flex gap-4 mb-6">
-            <Input 
-              placeholder="Nome do Local (ex: Teatro Municipal)" 
-              value={newTheaterName}
-              onChange={e => setNewTheaterName(e.target.value)}
-              className="bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white"
-            />
-            <Button onClick={handleAddTheater} className="bg-ruby hover:bg-ruby/90 text-white cursor-pointer whitespace-nowrap">
-              <Crown className="w-4 h-4 mr-2" />
-              Adicionar Local
-            </Button>
-          </div>
+          <div className="flex justify-between items-center mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-ruby/10 flex items-center justify-center text-ruby">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-white leading-none">Meus Locais</h2>
+                <p className="text-xs text-zinc-500 mt-1 font-medium">Gestão de salas e espaços físicos.</p>
+              </div>
+            </div>
 
-          <div className="space-y-2">
-            {loadingTheaters ? <Loader2 className="w-6 h-6 animate-spin text-zinc-400 mx-auto" /> : theaters.length === 0 ? (
-              <p className="text-center text-zinc-400 text-sm py-4 italic">Nenhum local cadastrado.</p>
+            <Dialog open={isLocationDialogOpen} onOpenChange={(open) => {
+              setIsLocationDialogOpen(open);
+              if (!open) setEditingLocation(null);
+            }}>
+              <DialogTrigger 
+                render={
+                  <Button className="bg-ruby hover:bg-ruby/90 text-white cursor-pointer h-10 rounded-xl px-4 font-bold text-xs gap-2 transition-all active:scale-95">
+                    <Plus className="w-4 h-4" />
+                    NOVO LOCAL
+                  </Button>
+                }
+              />
+              <DialogContent className="sm:max-w-[600px] rounded-[2rem] border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-8">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-black text-zinc-900 dark:text-white">
+                    {editingLocation ? "Editar Local" : "Cadastrar Novo Local"}
+                  </DialogTitle>
+                </DialogHeader>
+                <LocationForm 
+                  initialData={editingLocation} 
+                  onSuccess={() => {
+                    setIsLocationDialogOpen(false);
+                    setEditingLocation(null);
+                    loadProfile();
+                  }} 
+                  onCancel={() => {
+                    setIsLocationDialogOpen(false);
+                    setEditingLocation(null);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-3">
+            {loadingTheaters ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-ruby" /></div>
+            ) : theaters.length === 0 ? (
+              <p className="text-center text-zinc-400 text-sm py-8 italic border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-2xl">Nenhum local cadastrado.</p>
             ) : theaters.map(t => (
-              <div key={t.id} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl">
-                <div>
-                  <p className="font-bold text-zinc-900 dark:text-white">{t.name}</p>
-                  <p className="text-xs text-zinc-500">{t.address || "Sem endereço cadastrado"}</p>
+              <div key={t.id} className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl group transition-all hover:border-ruby/20">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-zinc-900 dark:text-white truncate">{t.name}</p>
+                  <div className="flex items-center gap-3 mt-1 text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-ruby" /> {t.address || "Sem endereço"}</span>
+                    <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {t.capacity || 0} Lugares</span>
+                    <span className="flex items-center gap-1"><DollarSign className="w-3 h-3 text-emerald-500" /> R$ {t.rent_price || 0}</span>
+                  </div>
                 </div>
-                <Button variant="ghost" onClick={() => handleRemoveTheater(t.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0 cursor-pointer"><Trash2 className="w-4 h-4" /></Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleEditLocation(t)}
+                    className="h-9 w-9 rounded-xl hover:bg-ruby/5 text-zinc-400 hover:text-ruby cursor-pointer transition-all"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleRemoveTheater(t.id)} 
+                    className="h-9 w-9 rounded-xl hover:bg-red-50 text-zinc-400 hover:text-red-500 cursor-pointer transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

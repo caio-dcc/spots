@@ -5,9 +5,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2, AlertTriangle, Eye, Pencil, Plus, FileSpreadsheet, FileText, Download } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, Edit2, Trash2, AlertTriangle, Eye, Pencil, Plus, FileSpreadsheet, FileText, Download, MoreVertical, Play, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { maskCurrency, unmaskCurrency, validateEvent, ValidationError } from "@/lib/masks";
 import { logAction } from "@/lib/audit";
 import { CheckCircle2, Circle, Users } from "lucide-react";
@@ -28,7 +36,7 @@ export default function ListarEventosPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 5;
 
   const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -57,6 +65,7 @@ export default function ListarEventosPage() {
   const [reportGuests, setReportGuests] = useState<any[]>([]);
   const [reportStaff, setReportStaff] = useState<any[]>([]);
   const [reportExpenses, setReportExpenses] = useState<any[]>([]);
+  const [reportTicketTypes, setReportTicketTypes] = useState<any[]>([]);
   const [loadingReport, setLoadingReport] = useState(false);
 
   // Ultra-safe parsing helper
@@ -89,7 +98,18 @@ export default function ListarEventosPage() {
       const userId = await getContextUserId();
       if (!userId) return;
 
-      let query = supabase.from('events').select('*', { count: 'exact' }).eq('user_id', userId).is('deleted_at', null).order('event_date', { ascending: false });
+      let query = supabase
+        .from('events')
+        .select(`
+          *,
+          theaters (
+            name,
+            rent_price
+          )
+        `, { count: 'exact' })
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .order('event_date', { ascending: false });
       if (search) query = query.ilike('title', `%${search}%`);
       
       const from = (page - 1) * PAGE_SIZE;
@@ -98,11 +118,41 @@ export default function ListarEventosPage() {
 
       const eventIds = events?.map(e => e.id) || [];
       if (eventIds.length > 0) {
-        const { data: guestCounts } = await supabase.from('guests').select('event_id, checked_in').in('event_id', eventIds);
+        const [
+          { data: guests },
+          { data: benefits },
+          { data: staff }
+        ] = await Promise.all([
+          supabase.from('guests').select('event_id, quantity, benefit_id, checked_in').in('event_id', eventIds),
+          supabase.from('event_benefits').select('id, event_id, valor').in('event_id', eventIds),
+          supabase.from('event_staff').select('event_id, valor_diaria, tem_diaria').in('event_id', eventIds)
+        ]);
+
         events?.forEach(e => {
-          const eg = guestCounts?.filter(g => g.event_id === e.id) || [];
-          e.guestsCount = eg.length;
-          e.checkedInCount = eg.filter(g => g.checked_in).length;
+          const eGuests = guests?.filter(g => g.event_id === e.id) || [];
+          const eBenefits = benefits?.filter(b => b.event_id === e.id) || [];
+          const eStaff = staff?.filter(s => s.event_id === e.id) || [];
+
+          e.guestsCount = eGuests.reduce((acc, g) => acc + (g.quantity || 1), 0);
+          e.checkedInCount = eGuests.filter(g => g.checked_in).length;
+          
+          // Receita: Soma de cada convidado * valor do seu benefício
+          const revenue = eGuests.reduce((acc, g) => {
+            const ben = eBenefits.find(b => b.id === g.benefit_id);
+            return acc + ((ben?.valor || 0) * (g.quantity || 1));
+          }, 0);
+
+          // Despesas: Equipe + Artistas (JSON) + Extras (JSON) + Aluguel Local
+          const staffCost = eStaff.reduce((acc, s) => acc + (s.tem_diaria ? (s.valor_diaria || 0) : 0), 0);
+          const artistCaches = (e.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
+          const extraExpenses = (e.extra_expenses || []).reduce((acc: number, ex: any) => acc + safeParse(ex.value || ex.amount || 0), 0);
+          const theaterRent = Number((e.theaters as any)?.rent_price || 0);
+
+          // Lucro Projetado = Receita - (Staff + Cachês + Despesas Extras + Aluguel + Taxa Spotlight)
+          const devFee = revenue * (revenue > 50000 ? 0.05 : 0.025);
+          e.projectedProfit = revenue - (staffCost + artistCaches + extraExpenses + theaterRent + devFee);
+          e.revenue = revenue;
+          e.theaterRent = theaterRent;
         });
       }
 
@@ -198,26 +248,47 @@ export default function ListarEventosPage() {
         .from('event_staff')
         .select('valor_diaria, employees(nome, cargo)')
         .eq('event_id', activeEvent.id);
-      
+
       setReportStaff(staffData || []);
 
-      // Use extra_expenses from JSONB
-      const expensesData = (activeEvent.extra_expenses || []).map((e: any) => ({
-        description: e.description,
-        amount: Number(e.value) || 0
-      }));
-      
+      // Combine extra_expenses JSONB (legado) + additional_expenses table
+      const { data: additionalExpensesData } = await supabase
+        .from('additional_expenses')
+        .select('*')
+        .eq('event_id', activeEvent.id);
+
+      const expensesData = [
+        ...(activeEvent.extra_expenses || []).map((e: any) => ({
+          description: e.description,
+          amount: Number(e.value) || 0
+        })),
+        ...(additionalExpensesData || []).map((e: any) => ({
+          id: e.id,
+          description: e.description,
+          amount: Number(e.amount) || 0
+        }))
+      ];
+
       setReportExpenses(expensesData);
 
-      // Financial Calculation
-      const grossRevenue = (activeEvent.sold_regular || 0) * (activeEvent.ticket_price || 0);
+      // Fetch Ticket Types Breakdown
+      const { data: ticketTypesData } = await supabase
+        .from('event_benefits')
+        .select('*')
+        .eq('event_id', activeEvent.id);
+      
+      setReportTicketTypes(ticketTypesData || []);
+
+      // Financial Calculation — usa capacity (ingressos vendidos) de forma consistente
+      const grossRevenue = (activeEvent.capacity || 0) * (activeEvent.ticket_price || 0);
       const staffTotal = (staffData || []).reduce((acc: number, curr: any) => acc + (curr.valor_diaria || 0), 0);
       const expensesTotal = (expensesData || []).reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0);
-      const totalExpenses = staffTotal + expensesTotal;
+      const artistCachesTotal = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
+      const totalExpenses = staffTotal + expensesTotal + artistCachesTotal;
       const currentFeePercent = grossRevenue > 50000 ? 0.05 : 0.025;
       const devFee = grossRevenue * currentFeePercent;
 
-      // Update event with final numbers
+      // Update event with final numbers (agora inclui cachês de artistas)
       await supabase.from('events').update({
         total_revenue: grossRevenue,
         total_expenses: totalExpenses,
@@ -306,65 +377,187 @@ export default function ListarEventosPage() {
     toast.success("Excel gerado com sucesso!");
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!activeEvent) return;
 
     try {
+      setLoadingReport(true);
       const doc = new jsPDF();
+      
+      // 1. Buscar métricas do evento anterior para comparação
+      const { data: prevEvents } = await supabase
+        .from('events')
+        .select(`
+          *,
+          theaters (
+            name,
+            rent_price
+          )
+        `)
+        .eq('user_id', activeEvent.user_id)
+        .eq('status', 'finalizado')
+        .lt('event_date', activeEvent.event_date)
+        .order('event_date', { ascending: false })
+        .limit(1);
+
+      const prevEvent = prevEvents?.[0];
+      let prevProfit = 0;
+      if (prevEvent) {
+        const prevRevenue = (prevEvent.capacity || 0) * (prevEvent.ticket_price || 0);
+        const prevFee = prevRevenue * (prevRevenue > 50000 ? 0.05 : 0.025);
+        const prevArtistCaches = (prevEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
+        const prevExtra = (prevEvent.extra_expenses || []).reduce((acc: number, ex: any) => acc + safeParse(ex.value || ex.amount || 0), 0);
+        const prevRent = Number((prevEvent.theaters as any)?.rent_price || 0);
+        prevProfit = prevRevenue - prevArtistCaches - prevExtra - prevFee - prevRent;
+      }
+
       const revenue = (activeEvent.capacity || 0) * (activeEvent.ticket_price || 0);
       const currentFeePercent = revenue > 50000 ? 0.05 : 0.025;
       const staffCosts = reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0);
       const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
       const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
-      
+      const theaterRent = Number((activeEvent.theaters as any)?.rent_price || 0);
       const devFee = revenue * currentFeePercent;
-      const profit = revenue - staffCosts - extraExpenses - artistCaches - devFee;
+      const totalExpenses = staffCosts + extraExpenses + artistCaches + devFee + theaterRent;
+      const profit = revenue - totalExpenses;
 
-      doc.setFontSize(20);
-      doc.text("Relatório do Evento", 14, 22);
+      // --- DESIGN DO PDF ---
       
-      doc.setFontSize(12);
-      doc.text(`Evento: ${activeEvent.title}`, 14, 32);
-      doc.text(`Data: ${new Date(activeEvent.event_date).toLocaleDateString('pt-BR')}`, 14, 38);
-      
-      doc.text(`(+) Receita de Ingressos: R$ ${revenue.toFixed(2)}`, 14, 48);
-      doc.text(`(-) Cachês de Atrações: R$ ${artistCaches.toFixed(2)}`, 14, 54);
-      doc.text(`(-) Diárias de Staff: R$ ${staffCosts.toFixed(2)}`, 14, 60);
-      doc.text(`(-) Despesas Adicionais: R$ ${extraExpenses.toFixed(2)}`, 14, 66);
-      doc.text(`(-) Taxa de Serviço Spotlight (${currentFeePercent * 100}%): R$ ${devFee.toFixed(2)}`, 14, 72);
+      // Header
+      doc.setFillColor(225, 29, 72); // Ruby
+      doc.rect(0, 0, 210, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.text(`(=) LUCRO LÍQUIDO: R$ ${profit.toFixed(2)}`, 14, 82);
+      doc.text("RELATÓRIO DE PERFORMANCE", 14, 20);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
+      doc.text(`${activeEvent.title.toUpperCase()} • ${new Date(activeEvent.event_date).toLocaleDateString('pt-BR')}`, 14, 28);
+      
+      // Cards de Resumo
+      const cardWidth = 60;
+      const cardY = 50;
+      
+      // Card Receita
+      doc.setFillColor(240, 253, 244); // Green 50
+      doc.roundedRect(14, cardY, cardWidth, 30, 3, 3, 'F');
+      doc.setTextColor(21, 128, 61); // Green 700
+      doc.setFontSize(8);
+      doc.text("RECEITA BRUTA", 18, cardY + 8);
+      doc.setFontSize(14);
+      doc.text(`R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 18, cardY + 20);
 
+      // Card Despesas
+      doc.setFillColor(254, 242, 242); // Red 50
+      doc.roundedRect(14 + cardWidth + 5, cardY, cardWidth, 30, 3, 3, 'F');
+      doc.setTextColor(185, 28, 28); // Red 700
+      doc.setFontSize(8);
+      doc.text("DESPESAS TOTAIS", 14 + cardWidth + 9, cardY + 8);
+      doc.setFontSize(14);
+      doc.text(`R$ ${totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14 + cardWidth + 9, cardY + 20);
+
+      // Card Lucro
+      doc.setFillColor(24, 24, 27); // Zinc 900
+      doc.roundedRect(14 + (cardWidth * 2) + 10, cardY, cardWidth, 30, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text("LUCRO LÍQUIDO", 14 + (cardWidth * 2) + 14, cardY + 8);
+      doc.setFontSize(14);
+      doc.text(`R$ ${profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14 + (cardWidth * 2) + 14, cardY + 20);
+
+      // Seção Comparativa
+      if (prevEvent) {
+        const profitDiff = profit - prevProfit;
+        const percentChange = prevProfit !== 0 ? (profitDiff / Math.abs(prevProfit)) * 100 : 100;
+        
+        doc.setFillColor(249, 250, 251); // Gray 50
+        doc.roundedRect(14, 90, 185, 25, 2, 2, 'F');
+        doc.setTextColor(82, 82, 91); // Gray 600
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text("INSIGHT DE CRESCIMENTO", 20, 98);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.text(`Comparado ao evento anterior (${prevEvent.title}):`, 20, 107);
+        
+        const trendColor = profitDiff >= 0 ? [21, 128, 61] : [185, 28, 28];
+        doc.setTextColor(trendColor[0], trendColor[1], trendColor[2]);
+        doc.setFont('helvetica', 'bold');
+        const sign = profitDiff >= 0 ? "+" : "";
+        doc.text(`${sign}${percentChange.toFixed(1)}% de rentabilidade`, 110, 107);
+      }
+
+      // Tabela de Detalhamento
+      doc.setTextColor(24, 24, 27);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Detalhamento Financeiro", 14, 130);
+
+      const expenseRows = [
+        ['Receita de Bilheteria', '+', `R$ ${revenue.toLocaleString('pt-BR')}`],
+        ['Cachês de Artistas', '-', `R$ ${artistCaches.toLocaleString('pt-BR')}`],
+        ['Diárias de Staff', '-', `R$ ${staffCosts.toLocaleString('pt-BR')}`],
+        ['Despesas Extras', '-', `R$ ${extraExpenses.toLocaleString('pt-BR')}`],
+        [`Taxa Spotlight (${(currentFeePercent*100).toFixed(1)}%)`, '-', `R$ ${devFee.toLocaleString('pt-BR')}`],
+      ];
+
+      autoTable(doc, {
+        startY: 135,
+        head: [['Categoria', 'Tipo', 'Valor']],
+        body: expenseRows,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 30, 30] },
+        columnStyles: {
+          2: { halign: 'right', fontStyle: 'bold' }
+        }
+      });
+
+      // Lista de Convidados se houver
       if (reportGuests.length > 0) {
-        const tableData = reportGuests.map((g, idx) => [
+        doc.addPage();
+        doc.setFillColor(225, 29, 72);
+        doc.rect(0, 0, 210, 20, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.text("LISTA DE PRESENÇA FINAL", 14, 13);
+
+        const guestData = reportGuests.map((g, idx) => [
           idx + 1,
           g.name,
           g.quantity,
-          g.checked_in ? 'PRESENTE' : 'AUSENTE'
+          g.checked_in ? 'CONFIRMADO' : 'AUSENTE'
         ]);
 
         autoTable(doc, {
-          startY: 92,
-          head: [['#', 'Convidado', 'Qtd', 'Check-in']],
-          body: tableData,
+          startY: 30,
+          head: [['#', 'Nome', 'Qtd', 'Status']],
+          body: guestData,
           theme: 'striped',
-          headStyles: { fillColor: [225, 29, 72] } // Ruby color
+          headStyles: { fillColor: [30, 30, 30] }
         });
       }
 
-      doc.save(`Relatorio_${activeEvent.title.replace(/\s+/g, '_')}.pdf`);
-      
-      (async () => {
-        const { getContextUserId } = await import("@/lib/auth-context");
-        const userId = await getContextUserId();
-        if (userId) await logAction(userId, 'EXPORTOU PDF (RELATORIO)', 'events', activeEvent.title);
-      })();
+      // Rodapé
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Documento Gerado por Spotlight Ecosystem em ${new Date().toLocaleString('pt-BR')} - Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
+      }
 
-      toast.success("PDF gerado com sucesso!");
+      doc.save(`Relatorio_Performance_${activeEvent.title.replace(/\s+/g, '_')}.pdf`);
+      
+      const { getContextUserId } = await import("@/lib/auth-context");
+      const userId = await getContextUserId();
+      if (userId) await logAction(userId, 'GEROU RELATORIO PREMIUM', 'events', activeEvent.title);
+
+      toast.success("Relatório Premium gerado com sucesso!");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao gerar PDF");
+      toast.error("Erro ao gerar relatório");
+    } finally {
+      setLoadingReport(false);
     }
   };
 
@@ -378,9 +571,8 @@ export default function ListarEventosPage() {
       const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
       const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
       
-      const profitBeforeFee = revenue - staffCosts - extraExpenses - artistCaches;
-      const devFee = profitBeforeFee > 0 ? profitBeforeFee * 0.10 : 0;
-      
+      const devFee = revenue * currentFeePercent;
+
       doc.setFontSize(22);
       doc.setTextColor(225, 29, 72);
       doc.text("NOTA DE DÉBITO - SPOTLIGHT", 105, 30, { align: 'center' });
@@ -592,7 +784,7 @@ export default function ListarEventosPage() {
                        {e.guestsCount > 0 && (
                          <div className="flex justify-between w-full mb-1">
                            <span className="text-zinc-500 font-medium">Lista:</span>
-                           <Button variant="ghost" size="sm" onClick={() => openGuestList(e)} className="h-6 px-2 text-ruby font-bold hover:bg-ruby/5">
+                            <Button variant="ghost" size="sm" onClick={() => openGuestList(e)} className="h-6 px-2 text-ruby font-bold hover:bg-ruby/5 cursor-pointer">
                              {e.checkedInCount} / {e.guestsCount} <Users className="w-3 h-3 ml-1" />
                            </Button>
                          </div>
@@ -604,7 +796,7 @@ export default function ListarEventosPage() {
                     {e.status === 'pendente' && (
                       <Button 
                         size="sm" 
-                        className="bg-zinc-900 text-white font-black text-[10px] px-4 h-10 rounded-xl hover:bg-zinc-800 transition-all flex-1"
+                        className="bg-zinc-900 text-white font-black text-[10px] px-4 h-10 rounded-xl hover:bg-zinc-800 transition-all flex-1 cursor-pointer"
                         onClick={() => { setActiveEvent(e); setIsStartConfirmOpen(true); }}
                       >
                         INICIAR
@@ -615,7 +807,7 @@ export default function ListarEventosPage() {
                         <span className="flex-[0.8] text-center py-2 bg-yellow-100 rounded-xl text-[9px] font-black text-yellow-600 uppercase tracking-widest flex items-center justify-center">Em andamento</span>
                         <Button 
                           size="sm" 
-                          className="bg-ruby text-white font-black text-[10px] px-4 h-10 rounded-xl hover:bg-ruby/90 transition-all flex-1"
+                          className="bg-ruby text-white font-black text-[10px] px-4 h-10 rounded-xl hover:bg-ruby/90 transition-all flex-1 cursor-pointer"
                           onClick={() => { setActiveEvent(e); setIsFinishConfirmOpen(true); }}
                         >
                           CONCLUIR
@@ -631,7 +823,7 @@ export default function ListarEventosPage() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-zinc-400 hover:bg-zinc-100 p-2 h-10 w-10 rounded-xl"
+                        className="text-zinc-400 hover:bg-zinc-100 p-2 h-10 w-10 rounded-xl cursor-pointer"
                         onClick={() => router.push(`/dashboard/eventos/${e.id}`)}
                       >
                         <Eye className="w-4 h-4" />
@@ -640,7 +832,7 @@ export default function ListarEventosPage() {
                         variant="ghost" 
                         size="sm" 
                         disabled={e.status === 'finalizado'}
-                        className="text-zinc-400 hover:bg-zinc-100 p-2 h-10 w-10 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="text-zinc-400 hover:bg-zinc-100 p-2 h-10 w-10 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                         onClick={() => handleEdit(e)}
                       >
                         <Edit2 className="w-4 h-4" />
@@ -654,16 +846,16 @@ export default function ListarEventosPage() {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto bg-transparent md:bg-white rounded-xl md:overflow-hidden shadow-none border border-zinc-200">
+        <div className="hidden md:block overflow-x-auto bg-transparent md:bg-white rounded-xl md:overflow-hidden shadow-none">
           <Table>
             <TableHeader className="bg-zinc-900 dark:bg-zinc-950 border-none overflow-hidden">
               <TableRow className="not-italic hover:bg-zinc-900 dark:hover:bg-zinc-950 border-none">
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5 pl-8">Evento</TableHead>
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5">Data</TableHead>
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5 hidden md:table-cell">Vendas</TableHead>
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5 hidden md:table-cell">Valor</TableHead>
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5 hidden md:table-cell">Lista VIP</TableHead>
-                <TableHead className="text-right font-black text-white uppercase tracking-widest text-[10px] py-5 pr-8">Ações</TableHead>
+                <TableHead className="font-black text-white uppercase tracking-widest xl:text-[9px] text-[8px] py-5 pl-8">Evento</TableHead>
+                <TableHead className="font-black text-white uppercase tracking-widest xl:text-[9px] text-[8px] py-5">Data</TableHead>
+                <TableHead className="font-black text-white uppercase tracking-widest xl:text-[9px] text-[8px] py-5 hidden md:table-cell">Vendidos</TableHead>
+                <TableHead className="font-black text-white uppercase tracking-widest xl:text-[9px] text-[8px] py-5 hidden md:table-cell text-emerald-400">Receita</TableHead>
+                <TableHead className="font-black text-white uppercase tracking-widest xl:text-[9px] text-[8px] py-5 hidden md:table-cell text-ruby">L. Projetado</TableHead>
+                <TableHead className="text-right font-black text-white uppercase tracking-widest xl:text-[9px] text-[8px] py-5 pr-8">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -677,22 +869,16 @@ export default function ListarEventosPage() {
                   className="not-italic hover:bg-zinc-50 transition-colors border-0 animate-in fade-in slide-in-from-top-4 duration-500"
                   style={{ animationFillMode: "both", animationDelay: `${index * 50}ms` }}
                 >
-                  <TableCell className="font-bold text-ruby text-base py-6 pl-8">{e.title}</TableCell>
-                  <TableCell className="text-zinc-900 font-bold py-6">{new Date(e.event_date).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell className="text-zinc-900 font-medium hidden md:table-cell py-6">{e.capacity} vendidos</TableCell>
-                  <TableCell className="text-zinc-900 font-medium hidden md:table-cell py-6">R$ {Number(e.ticket_price).toFixed(2).replace('.', ',')}</TableCell>
-                  <TableCell className="text-muted-foreground font-medium hidden md:table-cell py-6">
-                    {e.guestsCount > 0 ? (
-                      <Button variant="ghost" size="sm" onClick={() => openGuestList(e)} className="h-8 px-2 text-ruby hover:text-ruby hover:bg-ruby/5 font-bold cursor-pointer transition-all active:scale-95">
-                        <Users className="w-4 h-4 mr-1.5" />
-                        {e.checkedInCount} / {e.guestsCount}
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground/30 text-xs font-bold uppercase tracking-wider ml-2">—</span>
-                    )}
+                  <TableCell className="font-bold text-ruby xl:text-sm lg:text-xs text-[10px] py-6 pl-8">{e.title}</TableCell>
+                  <TableCell className="text-zinc-900 font-bold py-6 xl:text-xs text-[10px]">{new Date(e.event_date).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell className="text-zinc-900 font-medium hidden md:table-cell py-6 xl:text-xs text-[10px]">{e.guestsCount} / {e.capacity}</TableCell>
+                  <TableCell className="text-emerald-600 font-black hidden md:table-cell py-6 xl:text-xs text-[10px]">R$ {(e.revenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className={`font-black hidden md:table-cell py-6 xl:text-xs text-[10px] ${e.projectedProfit >= 0 ? 'text-zinc-900' : 'text-red-500'}`}>
+                    R$ {(e.projectedProfit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell className="text-right py-6">
-                    <div className="flex items-center justify-end gap-1 md:gap-2">
+                  <TableCell className="text-right py-6 pr-8">
+                    {/* Desktop Actions (> 1600px) */}
+                    <div className="hidden 2xl:flex items-center justify-end gap-2">
                       {e.status === 'pendente' && (
                         <Button 
                           size="sm" 
@@ -717,6 +903,10 @@ export default function ListarEventosPage() {
                       {e.status === 'finalizado' && (
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-3 py-1 rounded-full mr-2">Finalizado</span>
                       )}
+                      <Button variant="ghost" size="sm" className="cursor-pointer font-bold p-2 h-8 text-zinc-900 hover:text-ruby" onClick={() => openGuestList(e)}>
+                        <Users className="w-4 h-4" />
+                        <span className="hidden md:inline ml-1">Lista ({e.checkedInCount}/{e.guestsCount})</span>
+                      </Button>
                       <Button variant="ghost" size="sm" className="cursor-pointer font-bold p-2 h-8 text-zinc-900 hover:text-ruby" onClick={() => router.push(`/dashboard/eventos/${e.id}`)}>
                         <Eye className="w-4 h-4" />
                         <span className="hidden md:inline ml-1">Inspecionar</span>
@@ -734,6 +924,57 @@ export default function ListarEventosPage() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
+
+                    {/* Tablet/Laptop Actions (< 1600px) */}
+                    <div className="2xl:hidden flex items-center justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-ruby/10 hover:text-ruby transition-colors cursor-pointer">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 bg-white rounded-xl shadow-2xl border-zinc-100 p-2 animate-in fade-in zoom-in duration-200">
+                          <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest text-zinc-400 px-2 py-1.5">Ações do Evento</DropdownMenuLabel>
+                          <DropdownMenuSeparator className="bg-zinc-100 my-1" />
+                          
+                          {e.status === 'pendente' && (
+                            <DropdownMenuItem onClick={() => { setActiveEvent(e); setIsStartConfirmOpen(true); }} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors">
+                              <Play className="w-4 h-4 text-emerald-500" />
+                              Iniciar Evento
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {e.status === 'iniciado' && (
+                            <DropdownMenuItem onClick={() => { setActiveEvent(e); setIsFinishConfirmOpen(true); }} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors">
+                              <CheckCircle className="w-4 h-4 text-ruby" />
+                              Concluir Evento
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/eventos/${e.id}`)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors">
+                            <Eye className="w-4 h-4 text-zinc-400" />
+                            Inspecionar
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem disabled={e.status === 'finalizado'} onClick={() => handleEdit(e)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors disabled:opacity-30">
+                            <Edit2 className="w-4 h-4 text-zinc-400" />
+                            Editar Dados
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem onClick={() => openGuestList(e)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors">
+                            <Users className="w-4 h-4 text-zinc-400" />
+                            Lista de Convidados ({e.checkedInCount}/{e.guestsCount})
+                          </DropdownMenuItem>
+
+                          <DropdownMenuSeparator className="bg-zinc-100 my-1" />
+                          
+                          <DropdownMenuItem onClick={() => confirmDelete(e)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-red-600 hover:bg-red-50 cursor-pointer transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                            Excluir Evento
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -741,7 +982,7 @@ export default function ListarEventosPage() {
           </Table>
         </div>
         {/* Paginação */}
-        <div className="flex flex-col md:flex-row items-center justify-between px-4 py-6 md:py-0 bg-transparent mt-5 gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between px-4 py-6 md:py-0 bg-transparent mt-5 gap-4 mb-[10px]">
           <div className="text-sm text-zinc-500 font-black uppercase tracking-widest text-center">
             Página {page} de {totalPages || 1}
           </div>
@@ -919,8 +1160,8 @@ export default function ListarEventosPage() {
             </DialogHeader>
           </div>
           <DialogFooter className="mt-8 flex gap-3 sm:justify-center">
-            <Button variant="ghost" onClick={() => setIsStartConfirmOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-            <Button onClick={handleStartEvent} className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-bold px-8">Sim, Iniciar</Button>
+            <Button variant="ghost" onClick={() => setIsStartConfirmOpen(false)} className="rounded-xl font-bold cursor-pointer">Cancelar</Button>
+            <Button onClick={handleStartEvent} className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl font-bold px-8 cursor-pointer">Sim, Iniciar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -940,43 +1181,48 @@ export default function ListarEventosPage() {
             </DialogHeader>
           </div>
           <DialogFooter className="mt-8 flex gap-3 sm:justify-center">
-            <Button variant="ghost" onClick={() => setIsFinishConfirmOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-            <Button onClick={handleFinishEvent} className="bg-ruby hover:bg-ruby/90 text-white rounded-xl font-bold px-8">Concluir e Ver Relatório</Button>
+            <Button variant="ghost" onClick={() => setIsFinishConfirmOpen(false)} className="rounded-xl font-bold cursor-pointer">Cancelar</Button>
+            <Button onClick={handleFinishEvent} className="bg-ruby hover:bg-ruby/90 text-white rounded-xl font-bold px-8 cursor-pointer">Concluir e Ver Relatório</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Final Report Modal */}
       <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
-        <DialogContent className="max-w-[calc(100vw-32px)] sm:max-w-4xl w-full bg-white border-0 shadow-2xl rounded-[2rem] p-6 md:p-10 font-sans max-h-[95vh] overflow-y-auto">
-          <div className="flex flex-col items-center text-center mb-8">
-            <h1 className="text-4xl font-black text-ruby mb-2">Relatório do Evento</h1>
-            <p className="text-zinc-400 font-black uppercase tracking-[0.3em] text-[10px]">Amostra de Informações Financeiras</p>
+        <DialogContent className="max-w-[calc(100vw-16px)] sm:max-w-3xl w-full bg-white border-0 shadow-2xl rounded-3xl p-4 md:p-8 font-sans max-h-[96vh] overflow-y-auto custom-scrollbar">
+          <div className="flex flex-col items-center text-center mb-6">
+            <h1 className="text-xl md:text-3xl font-black text-ruby tracking-tighter uppercase">Relatório do Evento</h1>
+            <p className="text-zinc-400 font-black uppercase tracking-widest text-[8px] md:text-[9px]">{activeEvent?.title}</p>
           </div>
 
-          <div className="bg-zinc-50 p-8 rounded-[2rem] border border-zinc-100 shadow-sm space-y-8 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Ingressos Vendidos</p>
-                <p className="text-3xl font-black text-zinc-900">
-                  {activeEvent?.capacity || 0}
-                </p>
-                <p className="text-[10px] font-bold text-green-600 mt-1 uppercase">
-                  R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <div className="space-y-4 md:space-y-6">
+            {/* Top Cards - More compact */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="bg-zinc-50 p-3 rounded-2xl border border-zinc-100 text-center">
+                <p className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Ingressos</p>
+                <p className="text-xl md:text-2xl font-black text-zinc-900">{activeEvent?.capacity || 0}</p>
+              </div>
+              <div className="bg-zinc-50 p-3 rounded-2xl border border-zinc-100 text-center">
+                <p className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Presença</p>
+                <p className="text-xl md:text-2xl font-black text-ruby">
+                  {(() => {
+                    const totalSoldByType = reportTicketTypes.reduce((acc, t) => acc + (t.quantity || 0), 0);
+                    const soldTickets = totalSoldByType > 0 ? totalSoldByType : (activeEvent?.capacity || 0);
+                    const totalGuests = reportGuests.reduce((acc, g) => acc + (g.quantity || 1), 0);
+                    const presentGuests = reportGuests.filter(g => g.checked_in).reduce((acc, g) => acc + (g.quantity || 1), 0);
+                    
+                    const ticketPresence = reportTicketTypes.reduce((acc, t) => acc + (t.attendance_count || 0), 0);
+                    // Se não houver tipos definidos, usamos o capacity total como se todos tivessem vindo (fallback antigo)
+                    const totalPresent = (reportTicketTypes.length > 0 ? ticketPresence : soldTickets) + presentGuests;
+                    const totalExpected = soldTickets + totalGuests;
+                    
+                    return totalExpected > 0 ? ((totalPresent / totalExpected) * 100).toFixed(0) : 0;
+                  })()}%
                 </p>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Check-in Convidados</p>
-                <p className="text-3xl font-black text-ruby">
-                  {reportGuests.filter(g => g.checked_in).length} / {reportGuests.length}
-                </p>
-                <p className="text-[10px] font-bold text-zinc-400 mt-1 uppercase">
-                  {( (reportGuests.filter(g => g.checked_in).length / (reportGuests.length || 1)) * 100).toFixed(0)}% de presença
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2">Lucro Líquido Estimado</p>
-                <p className={`text-3xl font-black ${
+              <div className="bg-ruby/5 p-3 rounded-2xl border border-ruby/10 text-center col-span-2 md:col-span-1">
+                <p className="text-[7px] md:text-[8px] font-black text-ruby/60 uppercase tracking-widest mb-1">Lucro Líquido</p>
+                <p className={`text-xl md:text-2xl font-black ${
                   ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
                   reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
                   reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
@@ -991,118 +1237,113 @@ export default function ListarEventosPage() {
                   ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025))
                   ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
-                <p className="text-[10px] font-bold text-zinc-400 mt-1 uppercase">Já descontando despesas e taxas ({((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? '5%' : '2.5%'})</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Fechamento Financeiro (Continha)</label>
-                  <div className="bg-white rounded-2xl p-6 border border-zinc-200 space-y-3 font-mono text-sm">
-                    <div className="flex justify-between text-zinc-600">
-                      <span>(+) Receita Ingressos ({activeEvent?.capacity})</span>
-                      <span className="text-green-600 font-bold">R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between text-zinc-600">
-                      <span>(-) Diárias de Funcionários</span>
-                      <span className="text-ruby font-bold">- R$ {reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between text-zinc-600">
-                      <span>(-) Despesas Adicionais</span>
-                      <span className="text-ruby font-bold">- R$ {reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between text-zinc-600 italic">
-                      <span>(-) Taxa de Serviço Spotlight ({((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? '5%' : '2,5%'})</span>
-                      <span className="text-ruby font-bold">- R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between text-zinc-600">
-                      <span>(-) Cachês de Atrações</span>
-                      <span className="text-ruby font-bold">- R$ {(activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="pt-3 border-t border-zinc-100 flex justify-between text-base font-black text-zinc-900 uppercase">
-                      <span>(=) Lucro Líquido Final</span>
-                      <span className={
-                        ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                        reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                        reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                        (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                        ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)) >= 0 ? 'text-green-600' : 'text-ruby'
-                      }>
-                        R$ {(
-                        ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                        reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                        reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                        (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                        ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025))
-                        ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Despesas Extras</label>
-                  <div className="bg-white rounded-2xl p-4 border border-zinc-200 space-y-2 max-h-40 overflow-y-auto">
-                    {reportExpenses.map((exp) => (
-                      <div key={exp.id} className="flex justify-between text-xs py-1 border-b border-zinc-50 last:border-0">
-                        <span className="font-bold text-zinc-600">{exp.description}</span>
-                        <span className="font-black text-ruby">R$ {exp.amount.toFixed(2)}</span>
-                      </div>
-                    ))}
-                    {reportExpenses.length === 0 && <p className="text-[10px] text-zinc-400 italic text-center py-2">Sem despesas extras</p>}
-                  </div>
-                </div>
-              </div>
-
+            {/* Main Financial Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Lista de Presença</label>
-                <div className="max-h-80 overflow-y-auto pr-2 space-y-2">
-                  {reportGuests.map((g) => (
-                    <div key={g.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-100 text-sm">
-                      <span className={`font-bold ${g.checked_in ? 'text-ruby' : 'text-zinc-400'}`}>{g.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-zinc-400 uppercase">{g.quantity}x</span>
-                        {g.checked_in ? (
-                          <span className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase">Presente</span>
-                        ) : (
-                          <span className="text-[10px] font-black text-zinc-300 bg-zinc-50 px-2 py-1 rounded-full uppercase">Ausente</span>
-                        )}
+                <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 space-y-2 font-mono text-[9px] md:text-xs">
+                  <div className="flex justify-between text-zinc-500">
+                    <span>Receita Ingressos</span>
+                    <span className="text-green-600 font-bold">R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-500">
+                    <span>Staff & Diárias</span>
+                    <span className="text-ruby font-bold">- R$ {reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-500 italic">
+                    <span>Taxa Spotlight</span>
+                    <span className="text-ruby font-bold">- R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-500">
+                    <span>Cachês Atrações</span>
+                    <span className="text-ruby font-bold">- R$ {(activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-200 flex justify-between text-xs md:text-sm font-black text-zinc-900 uppercase">
+                    <span>Total Líquido</span>
+                    <span className="text-zinc-900">
+                      R$ {(
+                      ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
+                      reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
+                      reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
+                      (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
+                      ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025))
+                      ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 max-h-32 overflow-y-auto custom-scrollbar">
+                  <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-2">Despesas Detalhadas</p>
+                  {reportExpenses.map((exp) => (
+                    <div key={exp.id} className="flex justify-between text-[8px] md:text-[10px] py-1 border-b border-zinc-100 last:border-0">
+                      <span className="text-zinc-600 truncate mr-2">{exp.description}</span>
+                      <span className="font-bold text-ruby shrink-0">R$ {exp.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  {reportExpenses.length === 0 && <p className="text-[9px] text-zinc-400 italic text-center py-1">Nenhuma despesa extra</p>}
+                </div>
+
+                {/* Ticket Types Breakdown Section (Novo) */}
+                <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 max-h-32 overflow-y-auto custom-scrollbar">
+                  <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-2">Comparecimento por Tipo</p>
+                  {reportTicketTypes.map((type) => (
+                    <div key={type.id} className="flex justify-between text-[8px] md:text-[10px] py-1 border-b border-zinc-100 last:border-0">
+                      <span className="text-zinc-600 truncate mr-2">{type.nome}</span>
+                      <div className="flex gap-2 font-bold shrink-0">
+                        <span className="text-ruby">{type.attendance_count || 0}</span>
+                        <span className="text-zinc-300">/</span>
+                        <span className="text-zinc-500">{type.quantity}</span>
                       </div>
                     </div>
                   ))}
-                  {reportGuests.length === 0 && (
-                    <p className="text-center py-4 text-zinc-400 text-xs font-bold uppercase tracking-widest italic">Nenhum convidado na lista</p>
-                  )}
+                  {reportTicketTypes.length === 0 && <p className="text-[9px] text-zinc-400 italic text-center py-1">Nenhum tipo configurado</p>}
+                </div>
+              </div>
+
+              {/* QR Code Section - More compact */}
+              <div className="bg-zinc-900 rounded-3xl p-5 text-white flex flex-col items-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-ruby/20 to-transparent opacity-40" />
+                <div className="relative z-10 w-full flex flex-col items-center">
+                  <p className="text-[7px] font-black text-ruby uppercase tracking-[0.2em] mb-1">Taxa de Serviço</p>
+                  <h4 className="text-lg md:text-xl font-black mb-3">
+                    R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </h4>
+                  <div className="w-24 h-24 bg-white rounded-xl p-1.5 mb-3 shadow-xl">
+                    <img src="/spotlight_pix_qr_code.png" alt="Pix QR" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="w-full space-y-2">
+                    <p className="text-[8px] text-zinc-400 text-center leading-tight">Escaneie para pagar via PIX ou copie a chave:</p>
+                    <div className="bg-white/10 rounded-lg p-1.5 flex items-center justify-between">
+                       <span className="text-[8px] font-mono text-zinc-300 truncate mr-1">financeiro@spotlight.com.br</span>
+                       <button className="text-[7px] font-black text-ruby uppercase px-2 py-1 bg-white/10 rounded-md active:scale-95 transition-all">Copiar</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="space-y-4 mb-8">
-            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center block w-full">Exportar Relatório</label>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button onClick={handleDownloadInvoice} variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-bold hover:bg-zinc-50 cursor-pointer shadow-sm">
-                <FileText className="w-4 h-4 mr-2 text-ruby" />
-                Fatura de Serviço ({((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? '5%' : '2,5%'})
+            {/* Export Section - Horizontal on Desktop, Vertical on Mobile */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button onClick={handleDownloadInvoice} variant="outline" className="flex-1 h-10 rounded-xl text-[10px] font-bold border-zinc-200 cursor-pointer transition-all active:scale-95">
+                <FileText className="w-3 h-3 mr-2 text-ruby" /> Fatura
               </Button>
-              <Button onClick={handleDownloadExcel} variant="outline" className="flex-1 h-12 rounded-xl border-zinc-200 font-bold hover:bg-zinc-50 cursor-pointer shadow-sm">
-                <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-                Planilha Excel
+              <Button onClick={handleDownloadExcel} variant="outline" className="flex-1 h-10 rounded-xl text-[10px] font-bold border-zinc-200 cursor-pointer transition-all active:scale-95">
+                <FileSpreadsheet className="w-3 h-3 mr-2 text-emerald-600" /> Excel
               </Button>
-              <Button onClick={handleDownloadPDF} className="flex-1 h-12 rounded-xl bg-ruby hover:bg-ruby/90 text-white font-bold shadow-lg shadow-ruby/20 transition-all active:scale-95 cursor-pointer">
-                <Download className="w-4 h-4 mr-2" />
-                Baixar PDF
+              <Button onClick={handleDownloadPDF} className="flex-1 h-10 rounded-xl bg-ruby hover:bg-ruby/90 text-white text-[10px] font-bold cursor-pointer transition-all active:scale-95">
+                <Download className="w-3 h-3 mr-2" /> PDF Final
               </Button>
             </div>
-          </div>
 
-          <Button 
-            onClick={() => setIsReportModalOpen(false)}
-            className="w-full h-16 bg-zinc-900 hover:bg-zinc-800 text-white rounded-[1.5rem] font-black text-lg shadow-xl shadow-black/20 transition-all active:scale-95 cursor-pointer"
-          >
-            FECHAR RELATÓRIO
-          </Button>
+            <Button 
+              onClick={() => setIsReportModalOpen(false)}
+              className="w-full h-12 md:h-14 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl font-black text-sm md:text-base shadow-xl transition-all active:scale-95 cursor-pointer"
+            >
+              CONCLUIR E FECHAR
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -32,12 +32,11 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
   const [theaterId, setTheaterId] = useState(initialData?.theater_id || "");
   const [theaters, setTheaters] = useState<any[]>([]);
   const [capacity, setCapacity] = useState(initialData?.capacity?.toString() || "");
-  const [ticketPriceMask, setTicketPriceMask] = useState(initialData?.ticket_price ? initialData.ticket_price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
   const [tecnicoSom, setTecnicoSom] = useState(initialData?.tecnico_som || "");
   const [tecnicoIluminacao, setTecnicoIluminacao] = useState(initialData?.tecnico_iluminacao || "");
   const [produtor, setProdutor] = useState(initialData?.produtor || "");
-  const [description, setDescription] = useState(initialData?.description || "");
-  const [additionalDetails, setAdditionalDetails] = useState(initialData?.additional_details || "");
+  const [details, setDetails] = useState(initialData?.details || initialData?.additional_details || "");
+  const [isPublic, setIsPublic] = useState(initialData?.is_public || false);
   
   const [beneficios, setBeneficios] = useState<Beneficio[]>([]);
   const [funcionariosAssoc, setFuncionariosAssoc] = useState<FuncionarioAssociado[]>([]);
@@ -68,17 +67,22 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
 
       const { data: ths } = await supabase.from('theaters').select('id, name').eq('user_id', userId).order('name');
       setTheaters(ths || []);
+      
+      // Forçar seleção se estiver editando
+      if (isEdit && initialData?.theater_id) {
+        setTheaterId(initialData.theater_id);
+      }
     };
     loadData();
 
     if (isEdit && initialData?.id) {
       fetchRelations();
     }
-  }, [isEdit, initialData?.id]);
+  }, [isEdit, initialData?.id, initialData?.theater_id]);
 
   const fetchRelations = async () => {
     const { data: bens } = await supabase.from('event_benefits').select('*').eq('event_id', initialData.id);
-    if (bens) setBeneficios(bens.map(b => ({ id: b.id, nome: b.nome, valor_mask: b.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), quantidade: b.quantity.toString() })));
+    if (bens) setBeneficios(bens.map(b => ({ id: b.id, nome: b.nome, valor_mask: (b.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), quantidade: (b.quantity || 0).toString() })));
 
     const { data: staff } = await supabase.from('event_staff').select('*, employees(nome, cargo, eh_fixo, diaria, salario)').eq('event_id', initialData.id);
     if (staff) setFuncionariosAssoc(staff.map((s: any) => ({
@@ -92,14 +96,38 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
       salario: s.employees.salario
     })));
 
-    if (initialData.artistas && Array.isArray(initialData.artistas)) {
-      setArtistas(initialData.artistas.map((a: any) => {
-        if (typeof a === 'string') return { nome: a, cache: "0,00" };
-        return { 
-          nome: a.nome || a.name || a.atracao || "", 
-          cache: (a.cache || a.fee || a.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
-        };
-      }));
+    if (initialData.artistas) {
+      let rawArtistas = initialData.artistas;
+      // Se for uma string (JSON residual), tenta parsear
+      if (typeof rawArtistas === 'string') {
+        try { rawArtistas = JSON.parse(rawArtistas); } catch (e) { rawArtistas = []; }
+      }
+      
+      if (Array.isArray(rawArtistas)) {
+        setArtistas(rawArtistas.map((a: any) => {
+          // Se o item for uma string que parece JSON, tenta parsear o item também
+          let item = a;
+          if (typeof item === 'string' && item.startsWith('{')) {
+            try { item = JSON.parse(item); } catch (e) {}
+          }
+
+          if (typeof item === 'string') return { nome: item, cache: "0,00" };
+
+          let finalNome = item.nome || item.name || item.atracao || "";
+          // Se o nome ainda parece JSON, tenta um último parse
+          if (typeof finalNome === 'string' && finalNome.startsWith('{')) {
+            try { 
+              const nested = JSON.parse(finalNome); 
+              finalNome = nested.nome || nested.name || nested.atracao || finalNome;
+            } catch (e) {}
+          }
+
+          return { 
+            nome: finalNome, 
+            cache: (item.cache || item.fee || item.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+          };
+        }));
+      }
     }
   };
 
@@ -170,12 +198,12 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
         title,
         event_date: eventDate,
         event_time: eventTime || null,
-        theater_id: theaterId || null,
         capacity: Number(capacity),
-        ticket_price: unmaskCurrency(ticketPriceMask) || 0,
+        ticket_price: beneficios.length > 0 ? unmaskCurrency(beneficios[0].valor_mask) : 0,
         tecnico_som: tecnicoSom || null,
         tecnico_iluminacao: tecnicoIluminacao || null,
         produtor: produtor || null,
+        theater_id: theaterId || null,
         artistas: finalArtistas.length > 0 ? finalArtistas
           .filter((a: any) => (a.nome || a.name || "").trim())
           .map((a: any) => {
@@ -192,8 +220,8 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
           }) : null,
         custom_fields: customFields.length > 0 ? customFields : null,
         extra_expenses: extraExpenses.length > 0 ? extraExpenses.map(e => ({ description: e.description, value: unmaskCurrency(e.value_mask) })) : null,
-        description: description,
-        additional_details: additionalDetails,
+        details: details || null,
+        is_public: isPublic,
         category: category || null,
       };
 
@@ -215,22 +243,38 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
       }
 
       // 1. Sincronizar Benefícios (deleta e insere)
-      const { error: delBenErr } = await supabase.from('event_benefits').delete().eq('event_id', eventId);
-      if (delBenErr) console.warn("Aviso ao limpar benefícios:", delBenErr);
+      try {
+        const { error: delBenErr } = await supabase.from('event_benefits').delete().eq('event_id', eventId);
+        if (delBenErr) console.warn("Aviso ao limpar benefícios:", delBenErr);
 
-      if (beneficios.length > 0) {
-        const bensPayload = beneficios
-          .filter(b => b.nome && b.valor_mask)
-          .map(b => ({
-            event_id: eventId,
-            nome: b.nome,
-            valor: unmaskCurrency(b.valor_mask),
-            quantity: parseInt(b.quantidade) || 0
-          }));
-        if (bensPayload.length > 0) {
-          const { error: insBenErr } = await supabase.from('event_benefits').insert(bensPayload);
-          if (insBenErr) throw insBenErr;
+        if (beneficios.length > 0) {
+          const bensPayload = beneficios
+            .filter(b => b.nome && b.valor_mask)
+            .map(b => ({
+              event_id: eventId,
+              nome: b.nome,
+              valor: unmaskCurrency(b.valor_mask),
+              quantity: parseInt(b.quantidade) || 0
+            }));
+          
+          if (bensPayload.length > 0) {
+            const { error: insBenErr } = await supabase.from('event_benefits').insert(bensPayload);
+            if (insBenErr) {
+              // Se o erro for de coluna inexistente, tentamos salvar sem a coluna quantity como fallback
+              if (insBenErr.code === 'PGRST204') {
+                console.warn("Coluna 'quantity' não encontrada em 'event_benefits'. Salvando apenas nome e valor.");
+                const fallbackPayload = bensPayload.map(({ quantity, ...rest }) => rest);
+                const { error: retryErr } = await supabase.from('event_benefits').insert(fallbackPayload);
+                if (retryErr) throw retryErr;
+              } else {
+                throw insBenErr;
+              }
+            }
+          }
         }
+      } catch (benErr: any) {
+        console.error("Erro ao sincronizar benefícios:", benErr.message);
+        toast.error("O evento foi salvo, mas houve um erro ao atualizar os tipos de ingressos.");
       }
 
       // 2. Sincronizar Staff (Escala)
@@ -258,8 +302,8 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
       toast.success(isEdit ? "Evento atualizado com sucesso!" : "Evento publicado com sucesso!");
       router.push("/dashboard/eventos/listar");
     } catch (err: any) {
-      console.error("Erro no handleSave:", err);
-      toast.error(err.message || "Erro inesperado ao salvar o evento.");
+      console.error("Erro no handleSave:", err?.message, err?.code, err?.details, err?.hint, err);
+      toast.error(err.message || err?.details || "Erro inesperado ao salvar o evento.");
     } finally {
       setSaving(false);
     }
@@ -323,7 +367,7 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
                   {getError('title') && <p className="text-xs text-red-500 mt-1 ml-1">{getError('title')}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Data</label>
                     <Input type="date" className="bg-zinc-50 dark:bg-zinc-900/50 h-14 rounded-2xl border-zinc-200 dark:border-zinc-200 px-6 text-zinc-900 dark:text-white transition-all focus:ring-ruby shadow-sm" value={eventDate} onChange={e => setEventDate(e.target.value)} />
@@ -370,60 +414,73 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Bilheteria & Benefícios</h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-1 gap-8 mb-8 items-end">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Ingressos vendidos</label>
+                  <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Capacidade Total de Ingressos</label>
                   <Input type="number" placeholder="Ex: 450" className="bg-zinc-50 dark:bg-zinc-900/50 h-14 rounded-2xl border-zinc-200 dark:border-zinc-200 px-6 text-lg font-bold text-zinc-900 dark:text-white transition-all focus:ring-ruby shadow-sm" value={capacity} onChange={e => setCapacity(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Preço Base (R$)</label>
-                  <Input placeholder="0,00" className="bg-zinc-50 dark:bg-zinc-900/50 h-14 rounded-2xl border-zinc-200 dark:border-zinc-200 px-6 text-lg font-mono font-bold text-zinc-900 dark:text-white transition-all focus:ring-ruby shadow-sm" value={ticketPriceMask} onChange={e => setTicketPriceMask(maskCurrency(e.target.value))} />
                 </div>
               </div>
 
-              <div className="mb-8 p-6 bg-ruby/5 rounded-2xl border border-ruby/10 flex justify-between items-center">
+              <div className="mb-8 p-6 bg-ruby/5 rounded-2xl border border-ruby/10 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div>
                   <p className="text-[10px] font-black text-ruby uppercase tracking-widest">Receita Bruta Estimada</p>
                   <p className="text-2xl font-black text-zinc-900 dark:text-white">
-                    R$ {((Number(capacity) || 0) * (unmaskCurrency(ticketPriceMask) || 0) + (beneficios || []).reduce((acc, b) => acc + (unmaskCurrency(b.valor_mask) * (parseInt(b.quantidade) || 0)), 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(beneficios || []).reduce((acc, b) => acc + (unmaskCurrency(b.valor_mask) * (parseInt(b.quantidade) || 0)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Ticket Médio</p>
-                  <p className="text-sm font-bold text-zinc-600 dark:text-zinc-400">
-                    R$ {Number(capacity) > 0 ? (((Number(capacity) || 0) * (unmaskCurrency(ticketPriceMask) || 0) + (beneficios || []).reduce((acc, b) => acc + (unmaskCurrency(b.valor_mask) * (parseInt(b.quantidade) || 0)), 0)) / Number(capacity)).toFixed(2) : '0,00'}
-                  </p>
+                <div className="flex flex-col items-end">
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Validação de Ingressos</p>
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2 w-2 rounded-full ${beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0) === (parseInt(capacity) || 0) ? 'bg-green-500' : 'bg-ruby animate-pulse'}`} />
+                    <p className={`text-sm font-bold ${beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0) === (parseInt(capacity) || 0) ? 'text-green-600' : 'text-ruby'}`}>
+                      {beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0)} / {capacity || 0} definidos
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <div className="pt-6 border-t border-zinc-100 dark:border-white/5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="font-bold text-zinc-900 dark:text-white text-lg">Ingressos & Convênios</h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Gere novos ingressos ou adicione preços diferenciados.</p>
+                    <h3 className="font-bold text-zinc-900 dark:text-white text-lg">Tipos de Ingresso</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Defina VIP, Normal, Convênios, etc. A soma deve ser {capacity || 0}.</p>
                   </div>
                   <Button onClick={addBeneficio} className="w-full md:w-auto rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border border-zinc-200 font-bold h-10 gap-2 px-4 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0">
-                    <Plus className="w-4 h-4 text-ruby stroke-[3]" /> Adicionar Ingresso
+                    <Plus className="w-4 h-4 text-ruby stroke-[3]" /> Adicionar Tipo
                   </Button>
                 </div>
 
                 {beneficios.length === 0 ? (
                   <div className="py-10 border-2 border-dashed border-zinc-100 dark:border-zinc-200 rounded-[1.5rem] flex flex-col items-center justify-center text-center">
                     <Ticket className="w-8 h-8 text-zinc-300 mb-2" />
-                    <p className="text-sm text-zinc-400 font-medium italic">Nenhum convênio ou preço especial.</p>
+                    <p className="text-sm text-zinc-400 font-medium italic">Clique em "Adicionar Tipo" para definir os ingressos.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {beneficios.map(b => (
                       <div key={b.id} className="flex flex-col md:flex-row gap-3 items-stretch md:items-center bg-zinc-50 dark:bg-white/5 p-3 rounded-2xl border border-zinc-200 dark:border-white/10 group animate-in slide-in-from-right-4">
-                        <Input placeholder="Tipo (Ex: VIP, APPAI)" className="bg-white dark:bg-white/5 h-12 rounded-xl flex-1 border-zinc-200 dark:border-transparent focus:ring-ruby font-bold text-zinc-900 dark:text-white" value={b.nome} onChange={e => setBeneficios(beneficios.map(ben => ben.id === b.id ? { ...ben, nome: e.target.value } : ben))} />
-                        <div className="flex gap-3 items-center w-full md:w-auto">
-                          <Input placeholder="Qtd" type="number" className="bg-white dark:bg-white/5 h-12 flex-1 md:w-24 rounded-xl border-zinc-200 dark:border-transparent focus:ring-ruby text-center font-bold text-zinc-900 dark:text-white" value={b.quantidade} onChange={e => setBeneficios(beneficios.map(ben => ben.id === b.id ? { ...ben, quantidade: e.target.value } : ben))} />
-                          <Input placeholder="R$" className="bg-white dark:bg-white/5 h-12 flex-1 md:w-32 rounded-xl border-zinc-200 dark:border-transparent focus:ring-ruby font-mono font-bold text-right pr-4 text-zinc-900 dark:text-white" value={b.valor_mask} onChange={e => setBeneficios(beneficios.map(ben => ben.id === b.id ? { ...ben, valor_mask: maskCurrency(e.target.value) } : ben))} />
+                        <div className="flex-1">
+                          <label className="text-[8px] font-black text-zinc-400 uppercase mb-1 block">Tipo do Ingresso</label>
+                          <Input placeholder="Ex: Normal, VIP, APPAI..." className="bg-white dark:bg-white/5 h-12 rounded-xl w-full border-zinc-200 dark:border-transparent focus:ring-ruby font-bold text-zinc-900 dark:text-white" value={b.nome} onChange={e => setBeneficios(beneficios.map(ben => ben.id === b.id ? { ...ben, nome: e.target.value } : ben))} />
+                        </div>
+                        <div className="flex gap-3 items-end w-full md:w-auto">
+                          <div className="w-24 md:w-20">
+                            <label className="text-[8px] font-black text-zinc-400 uppercase mb-1 block">Qtd</label>
+                            <Input placeholder="0" type="number" className="bg-white dark:bg-white/5 h-12 w-full rounded-xl border-zinc-200 dark:border-transparent focus:ring-ruby text-center font-bold text-zinc-900 dark:text-white" value={b.quantidade} onChange={e => setBeneficios(beneficios.map(ben => ben.id === b.id ? { ...ben, quantidade: e.target.value } : ben))} />
+                          </div>
+                          <div className="w-32 md:w-32">
+                            <label className="text-[8px] font-black text-zinc-400 uppercase mb-1 block">Preço (R$)</label>
+                            <Input placeholder="0,00" className="bg-white dark:bg-white/5 h-12 w-full rounded-xl border-zinc-200 dark:border-transparent focus:ring-ruby font-mono font-bold text-right pr-4 text-zinc-900 dark:text-white" value={b.valor_mask} onChange={e => setBeneficios(beneficios.map(ben => ben.id === b.id ? { ...ben, valor_mask: maskCurrency(e.target.value) } : ben))} />
+                          </div>
                           <Button variant="ghost" className="h-12 w-12 shrink-0 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer" onClick={() => removeBeneficio(b.id)}><Trash2 className="w-5 h-5" /></Button>
                         </div>
                       </div>
                     ))}
+                    {beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0) !== (parseInt(capacity) || 0) && (
+                      <p className="text-[10px] text-ruby font-black uppercase text-center mt-2 animate-pulse">
+                        A soma das quantidades ({beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0)}) deve ser igual à capacidade total ({capacity || 0})
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -439,11 +496,20 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Descrição Pública</label>
-                  <textarea className="w-full rounded-2xl border border-zinc-200 dark:border-zinc-200 bg-zinc-50 dark:bg-zinc-900/50 px-6 py-4 text-sm font-medium text-zinc-900 dark:text-white min-h-[160px] resize-none focus:ring-2 focus:ring-ruby outline-none transition-all shadow-sm" placeholder="Escreva sobre o espetáculo..." value={description} onChange={e => setDescription(e.target.value)} />
+                  <textarea className="w-full rounded-2xl border border-zinc-200 dark:border-zinc-200 bg-zinc-50 dark:bg-zinc-900/50 px-6 py-4 text-sm font-medium text-zinc-900 dark:text-white min-h-[160px] resize-none focus:ring-2 focus:ring-ruby outline-none transition-all shadow-sm" placeholder="Escreva sobre o espetáculo..." value={details} onChange={e => setDetails(e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Observações Internas (Staff)</label>
-                  <textarea className="w-full rounded-2xl border border-zinc-200 dark:border-zinc-200 bg-zinc-50 dark:bg-zinc-900/50 px-6 py-4 text-sm font-medium text-zinc-900 dark:text-white min-h-[120px] resize-none focus:ring-2 focus:ring-ruby outline-none transition-all shadow-sm" placeholder="Detalhes logísticos, restrições ou notas..." value={additionalDetails} onChange={e => setAdditionalDetails(e.target.value)} />
+                <div className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
+                  <div>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-white">Venda Online Ativa</p>
+                    <p className="text-xs text-zinc-500 font-medium mt-0.5">Permite compra de ingressos pelo link público do evento</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic((p: boolean) => !p)}
+                    className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${isPublic ? 'bg-ruby' : 'bg-zinc-300'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isPublic ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
                 </div>
               </div>
             </section>
@@ -504,9 +570,14 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
                   <div className="flex gap-3">
                     <div className="flex-1 space-y-1">
                       <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">Cachê Acordado</label>
-                      <div className="flex items-center bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-200 px-4 shadow-sm h-14 transition-all focus-within:ring-2 focus-within:ring-ruby/20">
-                        <DollarSign className="w-5 h-5 text-emerald-500 mr-2" />
-                        <Input placeholder="0,00" className="bg-transparent border-none h-full text-lg font-black text-emerald-600 dark:text-emerald-400 focus:ring-0 px-0" value={novoArtistaCache} onChange={e => setNovoArtistaCache(maskCurrency(e.target.value))} />
+                      <div className="flex items-center bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-200 px-4 shadow-sm h-14 transition-all focus-within:border-ruby focus-within:ring-4 focus-within:ring-ruby/10">
+                        <DollarSign className="w-5 h-5 text-emerald-500 mr-2 shrink-0" />
+                        <Input 
+                          placeholder="0,00" 
+                          className="bg-transparent border-none h-full text-lg font-black text-emerald-600 dark:text-emerald-400 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 shadow-none outline-none w-full" 
+                          value={novoArtistaCache} 
+                          onChange={e => setNovoArtistaCache(maskCurrency(e.target.value))} 
+                        />
                       </div>
                     </div>
                     <div className="flex flex-col justify-end">
@@ -559,17 +630,17 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
               </div>
               <div className="space-y-4">
                 {customFields.map((field, idx) => (
-                  <div key={idx} className="flex flex-col md:flex-row gap-3 items-stretch md:items-center animate-in slide-in-from-right-4 p-3 md:p-0 bg-transparent rounded-2xl md:rounded-none">
+                  <div key={idx} className="flex flex-col gap-2 items-stretch animate-in slide-in-from-right-4 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/10">
                     <Input 
                       placeholder="Título (Ex: Wi-fi, Camarim...)" 
-                      className="bg-white md:bg-zinc-50 dark:bg-white/5 h-12 rounded-xl flex-1 border-zinc-200 dark:border-white/10 font-bold text-zinc-900 dark:text-white"
+                      className="bg-white dark:bg-zinc-950 h-12 rounded-xl w-full border-zinc-200 dark:border-white/10 font-bold text-zinc-900 dark:text-white"
                       value={field.label}
                       onChange={e => setCustomFields(customFields.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
                     />
-                    <div className="flex gap-3 items-center">
+                    <div className="flex gap-2 items-center">
                       <Input 
                         placeholder="Valor ou descrição..." 
-                        className="bg-white md:bg-zinc-50 dark:bg-white/5 h-12 rounded-xl flex-1 md:flex-[2] border-zinc-200 dark:border-white/10 font-medium text-zinc-900 dark:text-white"
+                        className="bg-white dark:bg-zinc-950 h-12 rounded-xl flex-1 border-zinc-200 dark:border-white/10 font-medium text-zinc-900 dark:text-white"
                         value={field.value}
                         onChange={e => setCustomFields(customFields.map((f, i) => i === idx ? { ...f, value: e.target.value } : f))}
                       />
@@ -598,15 +669,15 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
               </div>
               <div className="space-y-4">
                 {extraExpenses.map((exp, idx) => (
-                  <div key={idx} className="flex flex-col md:flex-row gap-3 items-stretch md:items-center animate-in slide-in-from-right-4 p-3 md:p-0 bg-transparent rounded-2xl md:rounded-none">
+                  <div key={idx} className="flex flex-col gap-2 items-stretch animate-in slide-in-from-right-4 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/10">
                     <Input 
                       placeholder="Descrição (Ex: Alimentação, Transporte...)" 
-                      className="bg-white md:bg-zinc-50 dark:bg-white/5 h-12 rounded-xl flex-1 md:flex-[2] border-zinc-200 dark:border-white/10 font-bold text-zinc-900 dark:text-white"
+                      className="bg-white dark:bg-zinc-950 h-12 rounded-xl w-full border-zinc-200 dark:border-white/10 font-bold text-zinc-900 dark:text-white"
                       value={exp.description}
                       onChange={e => setExtraExpenses(extraExpenses.map((ex, i) => i === idx ? { ...ex, description: e.target.value } : ex))}
                     />
-                    <div className="flex gap-3 items-center">
-                      <div className="flex items-center bg-white md:bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 px-4 flex-1 h-12">
+                    <div className="flex gap-2 items-center">
+                      <div className="flex items-center bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-white/10 px-4 flex-1 h-12">
                         <span className="text-xs font-bold text-zinc-400 mr-2">R$</span>
                         <Input 
                           placeholder="0,00" 

@@ -12,7 +12,7 @@ export function Footer({ accentColor = "ruby" }: FooterProps) {
       <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="flex flex-col items-center md:items-start gap-1">
           <p className="text-white font-black tracking-widest text-3xl">SPOTLIGHT</p>
-          <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">© 2026 Spotlight — Onde a gestão brilha.</p>
+          <p className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">© 2026 Spotlight — Cultura, Arte e Produtividade.</p>
         </div>
 
         <div className="flex flex-col items-center gap-2">

@@ -2,34 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
-  Ticket, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
   Settings,
-  ChevronDown, 
-  ChevronUp, 
+  ChevronDown,
+  ChevronUp,
   LogOut,
-  User,
   PieChart,
-  ClipboardList,
   Star,
   X,
   Building2,
-  Wallet
+  Wallet,
+  FileText,
+  ShoppingCart
 } from "lucide-react";
 import { useState, useEffect, memo } from "react";
 import { supabase } from "@/lib/supabase";
 
 export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
-  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({
-    eventos: true,
-    funcionarios: true,
-    convidados: true
-  });
-  
   const [username, setUsername] = useState("...");
   const [spotName, setSpotName] = useState("...");
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -42,8 +35,13 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
       const { getContextUserId } = await import("@/lib/auth-context");
       const contextUserId = await getContextUserId();
       
-      // Se eu for membro, quero ver o nome do "Dono" ou do Spot do dono
-      let displayUser = user;
+      // Busca o perfil do usuário logado
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
       if (contextUserId !== user.id) {
         const { data: owner } = await supabase.from('profiles').select('*').eq('id', contextUserId).single();
         if (owner) {
@@ -52,12 +50,22 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
         }
       }
 
-      const displayName = user.user_metadata?.full_name 
+      const displayName = userProfile?.full_name
+        || user.user_metadata?.full_name 
         || user.user_metadata?.name
-        || user.email?.split('@')[0] 
+        || (user.email === 'dev.caio.marques@gmail.com' ? 'Caio Marques' : user.email?.split('@')[0])
         || 'Usuário';
       
-      if (contextUserId === user.id) {
+      // Busca configurações da organização para o nome do Spot
+      const { data: orgSettings } = await supabase
+        .from('organization_settings')
+        .select('org_name')
+        .eq('user_id', contextUserId)
+        .single();
+
+      if (orgSettings?.org_name) {
+        setSpotName(orgSettings.org_name);
+      } else if (contextUserId === user.id) {
         const spotLabel = user.email?.split('@')[1]?.split('.')[0] || 'Meu Spot';
         setSpotName(spotLabel.charAt(0).toUpperCase() + spotLabel.slice(1));
       }
@@ -80,10 +88,12 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
         <X className="w-6 h-6" />
       </button>
 
-      {/* Logo */}
-      <div className="h-28 flex flex-col items-center justify-center px-6 bg-sidebar">
-        <img src="/spotlight-nobg.png" alt="Spotlight" className="h-[65px] w-auto object-contain" />
-        <span className="text-[10px] font-black text-muted-foreground mt-2 uppercase tracking-[0.3em]">Versão 0.0.2</span>
+      <div className="h-32 flex flex-col items-center justify-center px-6 bg-sidebar">
+        <img src="/spotlight-nobg.png" alt="Spotlight" className="h-[60px] w-auto object-contain" />
+        <div className="flex flex-col items-center mt-2">
+          <span className="text-ruby font-black text-[11px] uppercase tracking-[0.2em]">Modo Casa</span>
+          <span className="text-[8px] font-black text-black uppercase tracking-[0.3em] mt-[10px]">Versão 0.0.5</span>
+        </div>
       </div>
 
       {/* Navegação */}
@@ -124,6 +134,7 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           <div className="mt-1 ml-9 space-y-1">
             <Link href={`${base}/eventos/listar`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Listar</Link>
             <Link href={`${base}/eventos/cadastrar`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Cadastrar</Link>
+            <Link href={`${base}/eventos/checkin`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Check-in</Link>
           </div>
         </div>
 
@@ -142,14 +153,7 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           </div>
         </div>
         
-        <Link 
-          href={`${base}/locais`} 
-          onClick={onClose}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${pathname === `${base}/locais` ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5 mt-2'}`}
-        >
-          <Building2 className={`w-[17px] h-[17px] ${pathname === `${base}/locais` ? 'text-ruby' : 'text-zinc-600'}`} />
-          Locais
-        </Link>
+
 
         <Link 
           href={`${base}/calendario`} 
@@ -160,22 +164,60 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           Calendário
         </Link>
         
-        <Link 
-          href={`${base}/relatorios`} 
+        <Link
+          href={`${base}/relatorios`}
           onClick={onClose}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/relatorios') ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
         >
           <PieChart className={`w-[17px] h-[17px] ${isActive('/relatorios') ? 'text-ruby' : 'text-zinc-600'}`} />
           Relatórios
         </Link>
-        
-        <Link 
-          href={`${base}/configuracoes`} 
+
+        {/* Financeiro */}
+        <div className="pt-2">
+          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer hover:bg-white/5 transition-all">
+            <div className="flex items-center gap-3">
+              <Wallet className="w-[17px] h-[17px] text-zinc-600" />
+              Financeiro
+            </div>
+            <ChevronDown className="w-4 h-4 text-zinc-600" />
+          </div>
+          <div className="mt-1 ml-9 space-y-1">
+            <Link href={`${base}/eventos/despesas`} onClick={onClose} className={`block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/eventos/despesas') ? 'text-ruby' : 'text-zinc-600 hover:text-ruby hover:bg-ruby/5'}`}>- Despesas</Link>
+            <Link href={`${base}/financeiro/notas`} onClick={onClose} className={`block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/financeiro/notas') ? 'text-ruby' : 'text-zinc-600 hover:text-ruby hover:bg-ruby/5'}`}>
+              - Notas & Recibos
+              <span className="ml-1.5 text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-black">NOVO</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Venda Online */}
+        <Link
+          href={`${base}/vendas`}
           onClick={onClose}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/configuracoes') ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all mt-2 ${isActive('/vendas') ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
         >
-          <Settings className={`w-[17px] h-[17px] ${isActive('/configuracoes') ? 'text-ruby' : 'text-zinc-600'}`} />
+          <ShoppingCart className={`w-[17px] h-[17px] ${isActive('/vendas') ? 'text-ruby' : 'text-zinc-600'}`} />
+          Vendas
+          <span className="ml-auto text-[8px] bg-ruby/10 text-ruby px-1.5 py-0.5 rounded-full font-black">NOVO</span>
+        </Link>
+
+        <Link
+          href={`${base}/configuracoes`}
+          onClick={onClose}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${pathname === `${base}/configuracoes` ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
+        >
+          <Settings className={`w-[17px] h-[17px] ${pathname === `${base}/configuracoes` ? 'text-ruby' : 'text-zinc-600'}`} />
           Configurações
+        </Link>
+
+        <Link
+          href={`${base}/configuracoes/organizacao`}
+          onClick={onClose}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/configuracoes/organizacao') ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
+        >
+          <FileText className={`w-[17px] h-[17px] ${isActive('/configuracoes/organizacao') ? 'text-ruby' : 'text-zinc-600'}`} />
+          Organização
         </Link>
       </nav>
 

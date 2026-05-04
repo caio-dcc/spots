@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Script from "next/script";
 import { Felipa } from "next/font/google";
 import { Toaster } from "sonner";
 import { ModuleNav } from "@/components/ModuleNav";
+import { CookieBanner } from "@/components/CookieBanner";
 import { MantineProvider, AppShell, AppShellHeader, AppShellMain, createTheme, ColorSchemeScript } from '@mantine/core';
 import '@mantine/core/styles.css';
 
-const theme = createTheme({});
+import { GlobalBackground } from "@/components/GlobalBackground";
+import { AppPaddingWrapper } from "@/components/AppPaddingWrapper";
 
+const theme = createTheme({});
 
 const felipa = Felipa({
   weight: "400",
@@ -35,9 +39,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <ColorSchemeScript defaultColorScheme="light" />
+        {/* Mantine e Tailwind Theme Detector */}
+      </head>
+      <body className={`${felipa.variable} min-h-full flex flex-col font-sans relative overflow-x-hidden bg-black text-white`}>
+        <GlobalBackground />
+        
         {/* Lê o tema do LocalStorage antes do React hidratar para evitar flash */}
-        <script
+        <Script
+          id="theme-detector"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -45,6 +55,8 @@ export default function RootLayout({
                   var saved = localStorage.getItem('spotme_dark_mode');
                   var isDark = saved === 'true';
                   var html = document.documentElement;
+                  
+                  // Tailwind / Global CSS
                   if (isDark) {
                     html.classList.add('dark');
                     html.setAttribute('data-theme', 'dark');
@@ -52,34 +64,29 @@ export default function RootLayout({
                     html.classList.remove('dark');
                     html.setAttribute('data-theme', 'light');
                   }
+                  
+                  // Mantine Color Scheme
+                  html.setAttribute('data-mantine-color-scheme', isDark ? 'dark' : 'light');
                 } catch(e) {}
               })();
             `,
           }}
         />
-      </head>
-      <body className={`${felipa.variable} min-h-full flex flex-col font-sans relative overflow-x-hidden`}>
-        {/* Global Background Image with Blur */}
-        <div className="fixed inset-0 z-[-1] pointer-events-none">
-          <img 
-            src="/teatro_ilha.png" 
-            alt="Background" 
-            className="w-full h-full object-cover opacity-30 blur-sm scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black" />
-        </div>
-
+        
         <MantineProvider theme={theme} defaultColorScheme="light">
           <AppShell bg="transparent" padding={0}>
-            <header className="absolute top-0 left-0 w-full z-50 bg-black/20 backdrop-blur-sm">
+            <header className="absolute top-0 left-0 w-full z-[100]">
               <ModuleNav />
             </header>
-            <AppShellMain bg="transparent" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-              {children}
+            <AppShellMain bg="transparent">
+              <AppPaddingWrapper>
+                {children}
+              </AppPaddingWrapper>
             </AppShellMain>
           </AppShell>
         </MantineProvider>
         <Toaster position="top-right" richColors closeButton />
+        <CookieBanner />
       </body>
     </html>
   );
