@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import {
   organizerShareLabel,
   platformFeeLabel,
-} from "@/lib/platform-fee";
+} from "@/lib/stripe";
 
 interface StripeConnectButtonProps {
   stripeAccountId?: string | null;

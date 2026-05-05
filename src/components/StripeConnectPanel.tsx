@@ -4,7 +4,7 @@ import { StripeConnectButton } from "@/components/StripeConnectButton";
 import {
   organizerShareLabel,
   platformFeeLabel,
-} from "@/lib/platform-fee";
+} from "@/lib/stripe";
 import { CreditCard, Lock, Shield, Split, Wallet } from "lucide-react";
 
 interface StripeConnectPanelProps {

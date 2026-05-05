@@ -24,17 +24,6 @@ async function loadMetrics() {
   };
 }
 
-async function loadRecentPurchases() {
-  const { data } = await supabaseAdmin
-    .from("ticket_orders")
-    .select(
-      "id, buyer_name, buyer_email, quantity, total_amount, platform_fee, status, created_at, paid_at, events:event_id ( title )",
-    )
-    .order("created_at", { ascending: false })
-    .limit(20);
-  return data ?? [];
-}
-
 export default async function AdminDashboard() {
   const m = await loadMetrics();
 
@@ -85,9 +74,6 @@ export default async function AdminDashboard() {
           </p>
         </div>
       </section>
-    </div>
-  );
-}
     </div>
   );
 }
