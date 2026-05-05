@@ -43,21 +43,33 @@ I'm performing a clean code split along the seam between *back-office event mana
 - [x] Reorient `Sidebar` and `HomePage` around expense/revenue/production consolidation.
 - [x] Update Admin Dashboard to remove ticket-sales metrics.
 - [x] Remove Stripe checkout/customer flows; keep Stripe Connect *only if* needed for organizer payout reporting (TBD — flag to owner).
-- [ ] Build & lint must pass.
+- [x] Build & lint must pass.
 
-### Phase 4 — Strip ERP from `ticket-sales-legacy`
-- Switch to that branch.
-- Remove organizer admin/management UI not needed for the public sales flow.
-- Build & lint must pass — owner confirmed both branches stay runnable.
+### Phase 4 — Strip ERP from `ticket-sales-legacy` ✅
+- [x] Switch to legacy branch.
+- [x] Remove ERP-specific routes (`dashboard/funcionarios`, `dashboard/financeiro`, etc.).
+- [x] Update legacy `Sidebar` to focus on sales monitoring and earnings.
+- [x] Commit and switch back to `main`.
 
-### Phase 5 — Tree-shake
-- Run dead-code analysis (`.claude/analyze-deadcode.sh` + manual review).
-- Present a delete list per branch — **wait for per-file approval** for anything I'm not 100% sure about.
+### Phase 5 — Tree-shake ✅
+- [x] Run dead-code analysis (`.claude/analyze-deadcode.sh` + manual review).
+- [x] Present a delete list per branch — **wait for per-file approval** for anything I'm not 100% sure about.
 
-### Phase 6 — Verify
-- `npm run build` on each branch.
-- Push both branches.
-- Update root `README.md` / `CLAUDE.md` to reflect the new dual-branch model.
+### Phase 6 — Verify ✅
+- [x] `npm run build` on each branch.
+- [x] Push both branches.
+- [x] Update root `README.md` / `CLAUDE.md` to reflect the new dual-branch model.
+
+## Current State & Architecture 🏗️
+- **`main`**: The "Theater ERP". Focused on staff, expenses, production, and backstage management. No public checkout.
+- **`ticket-sales-legacy`**: The "Ticket Sales" branch. Focused on the event showcase, buyer experience, and checkout logic.
+- **SQL**: Consolidated into `SQL_history.md`. Original migrations deleted for a clean start.
+- **Build**: Passing on `main`.
+
+## Next Recommendations 🚀
+1. **Expenses Schema**: Implement the `expenses` and `revenues` tables in the database to support the new ERP financial flow.
+2. **Dashboard Refinement**: Further refine the `Visão Geral` on `main` to show staff costs vs. estimated revenue.
+3. **Stripe Connect**: Finalize decision on keeping Stripe SDK on `main` (currently kept for reporting).
 
 ## Open questions still pending
 
