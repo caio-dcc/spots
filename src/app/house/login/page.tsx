@@ -122,6 +122,43 @@ export default function AdminLoginPage() {
             loading={loading}
             image="/bailarina.png"
         />
+
+        {/* Kill Excel Section - Centered */}
+        <div className="w-full max-w-4xl mt-48 text-center px-4">
+          <div className="space-y-12">
+            <div className="space-y-6">
+              <span className="text-ruby font-black uppercase tracking-[0.4em] text-[10px] block mb-[10px]">Adeus às Planilhas</span>
+              <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none">
+                Gestão Centralizada <br />
+                <span className="text-white/40">Sem Caos Operacional.</span>
+              </h2>
+            </div>
+
+            <p className="text-zinc-400 text-xl leading-relaxed font-medium max-w-2xl mx-auto">
+              O Spotlight elimina a fragmentação da sua produção. Substituímos dezenas de abas do Excel por uma interface de alta performance, 
+              onde cada centavo e cada membro do staff são rastreados em tempo real.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-8">
+              {[
+                { title: "Staff Intelligence", desc: "Controle diárias de freelancers e equipe fixa com logs de auditoria." },
+                { title: "Revenue Control", desc: "Acompanhe lucro líquido e despesas operacionais por espetáculo." },
+                { title: "Real-time Check-in", desc: "Validação ultra-rápido de convidados e controle de acesso técnico." },
+                { title: "Smart Reporting", desc: "Métricas de performance e ROI automatizadas ao fim de cada evento." }
+              ].map((item, idx) => (
+                <div key={idx} className="space-y-3 bg-white/5 p-8 rounded-3xl border border-white/10 hover:border-ruby/30 transition-all group">
+                  <h4 className="text-white font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3">
+                    <div className="w-2 h-2 bg-ruby rounded-full shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]" />
+                    {item.title}
+                  </h4>
+                  <p className="text-zinc-500 text-[11px] leading-relaxed uppercase font-black tracking-widest opacity-70 group-hover:opacity-100 transition-opacity">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </main>
 
       <Footer accentColor="#810B14" />

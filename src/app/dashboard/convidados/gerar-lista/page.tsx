@@ -11,6 +11,22 @@ import { supabase } from "@/lib/supabase";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { logAction } from "@/lib/audit";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure pdfjs worker
+if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+  // Using a version-locked CDN for stability
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+}
+
 
 interface Guest { id: string; nome: string; quantidade: number; benefit_id?: string; benefit_name?: string; detalhe?: string; }
 interface Benefit { id: string; nome: string; valor: number; }
@@ -190,8 +206,90 @@ export default function GerarListaPage() {
     })();
   };
 
-  const handleWhatsApp = () => {
+  const generatePDFBlob = () => {
+    const doc = new jsPDF();
+    const event = associatedEvent || { title: listTitle || 'Lista de Convidados' };
+    doc.setFontSize(18);
+    doc.text(event.title, 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString()}`, 14, 28);
+    
+    const tableData = guests.map((g, i) => [
+      i + 1,
+      g.nome,
+      g.detalhe || '-',
+      g.quantidade,
+      '[ ]'
+    ]);
+
+    autoTable(doc, {
+      head: [['Nº', 'Convidado', 'Detalhe', 'Qtd', 'Check-in']],
+      body: tableData,
+      startY: 35,
+      theme: 'grid',
+      headStyles: { fillColor: [180, 0, 0] },
+      styles: { fontSize: 9 }
+    });
+
+    return doc.output('blob');
+  };
+
+  const handleExportPDF = () => {
     if (guests.length === 0) return;
+    const doc = new jsPDF();
+    const event = associatedEvent || { title: listTitle || 'Lista de Convidados' };
+    
+    doc.setFontSize(18);
+    doc.text(event.title, 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Total de Convidados: ${guests.length}`, 14, 28);
+    
+    const tableData = guests.map((g, i) => [
+      i + 1,
+      g.nome,
+      g.detalhe || '-',
+      g.quantidade,
+      '( )'
+    ]);
+
+    autoTable(doc, {
+      head: [['Nº', 'Convidado', 'Detalhe', 'Qtd', 'Check-in']],
+      body: tableData,
+      startY: 35,
+      theme: 'striped',
+      headStyles: { fillColor: [180, 0, 0] }
+    });
+
+    doc.save(`${(listTitle || "Lista").replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+    
+    (async () => {
+      const { getContextUserId } = await import("@/lib/auth-context");
+      const userId = await getContextUserId();
+      if (userId) await logAction(userId, 'EXPORTOU PDF (LISTA)', 'guests', listTitle || associatedEvent?.title);
+    })();
+  };
+
+  const handleWhatsApp = async () => {
+    if (guests.length === 0) return;
+    
+    // Check if we can share a file
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([new Blob()], 'test.pdf', { type: 'application/pdf' })] })) {
+      const blob = generatePDFBlob();
+      const file = new File([blob], `${(listTitle || "Lista").replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`, { type: 'application/pdf' });
+      
+      try {
+        await navigator.share({
+          files: [file],
+          title: listTitle || 'Lista de Convidados',
+          text: 'Segue a lista de convidados em PDF.'
+        });
+        return;
+      } catch (err) {
+        console.error("Erro ao compartilhar PDF:", err);
+      }
+    }
+
+    // Fallback to text if file sharing fails or is not supported
     let text = `*${listTitle || 'Lista de Convidados'}*\n\n`;
     guests.forEach((g, i) => { text += `${i + 1}. ${g.nome} ${g.detalhe ? `(${g.detalhe})` : ''} - ${g.quantidade} ingresso(s) (${g.benefit_name || 'NORMAL'})\n`; });
     text += `\n*Total:* ${guests.length} nomes / ${guests.reduce((a, c) => a + c.quantidade, 0)} ingressos`;
@@ -202,6 +300,69 @@ export default function GerarListaPage() {
       const userId = await getContextUserId();
       if (userId) await logAction(userId, 'COMPARTILHOU LISTA VIA WHATSAPP', 'guests', listTitle || associatedEvent?.title);
     })();
+  };
+
+  const handleImportPDF = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const typedarray = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        let fullText = "";
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map((item: any) => item.str).join(" ");
+        }
+
+        // Simple parsing logic: look for lines that look like names
+        // This is highly heuristic. We'll try to find names by splitting by common delimiters
+        const lines = fullText.split(/\d+\.|\n/).map(l => l.trim()).filter(l => l.length > 3);
+        const nameRegex = /^[a-zA-ZÀ-ÿ\s]+$/;
+        const newGuests: Guest[] = [];
+
+        lines.forEach(line => {
+          // Try to extract name and quantity (if exists)
+          // Look for "Name - Qtd" or "Name (Detail)"
+          const match = line.match(/^([a-zA-ZÀ-ÿ\s]+)(?:\s*\(?([^)]*)\)?\s*)?(?:\s*-\s*(\d+))?/);
+          if (match) {
+            const cleanName = match[1].trim();
+            if (cleanName.length >= 3 && nameRegex.test(cleanName)) {
+              if (!newGuests.some(g => g.nome.toLowerCase() === cleanName.toLowerCase())) {
+                newGuests.push({
+                  id: Math.random().toString(36).substr(2, 9),
+                  nome: cleanName,
+                  quantidade: Number(match[3]) || 1,
+                  detalhe: match[2]?.trim() || undefined
+                });
+              }
+            }
+          }
+        });
+
+        if (newGuests.length > 0) {
+          setGuests(prev => {
+            const combined = [...prev];
+            newGuests.forEach(ng => {
+              if (!combined.some(g => g.nome.toLowerCase() === ng.nome.toLowerCase())) combined.push(ng);
+            });
+            return combined.sort((a, b) => a.nome.localeCompare(b.nome));
+          });
+          toast.success(`${newGuests.length} convidados importados do PDF.`);
+        } else {
+          toast.error("Não foi possível encontrar nomes válidos no PDF.");
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Erro ao processar o PDF.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -319,6 +480,8 @@ export default function GerarListaPage() {
 
   return (
     <div className="p-8 w-full h-full animate-in fade-in duration-500 font-sans bg-background text-foreground overflow-y-auto">
+      <input id="excel-upload" type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
+      <input id="pdf-upload" type="file" accept=".pdf" className="hidden" onChange={handleImportPDF} />
       <div className="flex flex-col items-center text-center md:text-left md:items-start md:flex-row justify-between mb-8 gap-6 print:hidden">
         <div className="animate-in slide-in-from-left duration-500">
           <h1 className="text-3xl font-black tracking-tight text-ruby uppercase">Gerador de Lista</h1>
@@ -326,13 +489,34 @@ export default function GerarListaPage() {
         </div>
         <div className="flex flex-col items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
           <div className="flex flex-wrap justify-center gap-2 w-full md:w-auto">
-            <input type="file" id="excel-upload" hidden accept=".xlsx, .xls, .csv" onChange={handleImportExcel} />
-            <Button variant="outline" size="sm" className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-foreground text-[10px] md:text-xs rounded-xl h-10 hover:bg-accent transition-all uppercase tracking-widest shadow-none" onClick={() => document.getElementById('excel-upload')?.click()}><Upload className="w-4 h-4 mr-2" />Importar</Button>
-            <Button variant="outline" size="sm" onClick={() => setIsEventModalOpen(true)} disabled={guests.length === 0} className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-foreground text-[10px] md:text-xs rounded-xl h-10 hover:bg-accent transition-all uppercase tracking-widest shadow-none disabled:opacity-30"><Calendar className="w-4 h-4 mr-2" />Associar a evento</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-foreground text-[10px] md:text-xs rounded-xl h-10 hover:bg-accent transition-all uppercase tracking-widest shadow-none">
+                  <Upload className="w-4 h-4 mr-2" /> Importar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-950 border-white/10 text-white rounded-xl font-bold">
+                <DropdownMenuItem onClick={() => document.getElementById('excel-upload')?.click()} className="cursor-pointer hover:bg-white/5">Excel (.xlsx)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => document.getElementById('pdf-upload')?.click()} className="cursor-pointer hover:bg-white/5">PDF (.pdf)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-foreground text-[10px] md:text-xs rounded-xl h-10 hover:bg-accent transition-all uppercase tracking-widest shadow-none">
+                  <Download className="w-4 h-4 mr-2" /> Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-950 border-white/10 text-white rounded-xl font-bold">
+                <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer hover:bg-white/5">Excel (.xlsx)</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer hover:bg-white/5">PDF (.pdf)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button variant="outline" size="sm" onClick={() => setIsEventModalOpen(true)} disabled={guests.length === 0} className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-foreground text-[10px] md:text-xs rounded-xl h-10 hover:bg-accent transition-all uppercase tracking-widest shadow-none disabled:opacity-30"><Calendar className="w-4 h-4 mr-2" />Associar</Button>
             <Button variant="outline" size="sm" onClick={() => window.print()} disabled={guests.length === 0} className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-foreground text-[10px] md:text-xs rounded-xl h-10 hover:bg-accent transition-all uppercase tracking-widest shadow-none disabled:opacity-30"><Printer className="w-4 h-4 mr-2" />Imprimir</Button>
             <Button variant="outline" size="sm" onClick={handleClearAll} disabled={guests.length === 0} className="flex-1 md:flex-none cursor-pointer font-black border-zinc-200 bg-card text-muted-foreground hover:text-ruby hover:bg-ruby/5 text-[10px] md:text-xs rounded-xl h-10 transition-all uppercase tracking-widest disabled:opacity-30"><Trash2 className="w-4 h-4 mr-2" />Limpar</Button>
             <Button onClick={handleWhatsApp} size="sm" disabled={guests.length === 0} className="flex-1 md:flex-none bg-[#128C7E] hover:bg-[#075E54] text-white border-0 cursor-pointer font-black shadow-none text-[10px] md:text-xs rounded-xl h-10 transition-all uppercase tracking-widest disabled:opacity-30"><Send className="w-4 h-4 mr-2" />WhatsApp</Button>
-            <Button onClick={handleExportExcel} size="sm" disabled={guests.length === 0} className="flex-1 md:flex-none bg-emerald-700 hover:bg-emerald-800 text-white border-0 cursor-pointer font-black shadow-none text-[10px] md:text-xs rounded-xl h-10 transition-all uppercase tracking-widest disabled:opacity-30"><Download className="w-4 h-4 mr-2" />XLS (Excel)</Button>
           </div>
         </div>
       </div>
@@ -425,63 +609,59 @@ export default function GerarListaPage() {
           </div>
         </div>
         
-        <div className="hidden md:block overflow-x-auto p-4">
-          <Table>
-            <TableHeader className="bg-zinc-900 border-none overflow-hidden">
-              <TableRow className="not-italic hover:bg-zinc-900 border-none">
-                <TableHead className="w-16 text-center font-black text-white uppercase tracking-widest text-[10px] py-5">Nº</TableHead>
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5">Convidado</TableHead>
-                <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5">Vínculo/Detalhe</TableHead>
-                {!ignoreDetails && (
-                  <>
-
-                    <TableHead className="text-right font-black text-white uppercase tracking-widest text-[10px] py-5 pr-10">Qtd</TableHead>
-                  </>
-                )}
-                <TableHead className="w-24 text-right font-black text-white uppercase tracking-widest text-[10px] py-5 pr-10">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {guests.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-zinc-500 font-bold text-sm">
-                    Sua lista aparecerá aqui
-                  </TableCell>
-                </TableRow>
-              ) : (
-                guests.map((g, idx) => (
-                  <TableRow key={g.id} className="not-italic hover:bg-zinc-50 transition-colors border-zinc-200 group">
-                    <TableCell className="text-center font-bold text-zinc-400">{idx + 1}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-ruby text-base">{g.nome}</span>
-
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-zinc-500 font-bold text-xs uppercase bg-zinc-100 px-3 py-1 rounded-lg border border-zinc-200">
-                        {g.detalhe || "Sem detalhe"}
-                      </span>
-                    </TableCell>
+        <div className="p-4">
+          {guests.length === 0 ? (
+            <div className="text-center py-12 text-zinc-500 font-bold text-sm bg-muted/20 rounded-3xl border-2 border-dashed border-zinc-200">
+              Sua lista aparecerá aqui
+            </div>
+          ) : (
+            /* Modern Table View always */
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-zinc-900 border-none overflow-hidden">
+                  <TableRow className="not-italic hover:bg-zinc-900 border-none">
+                    <TableHead className="w-16 text-center font-black text-white uppercase tracking-widest text-[10px] py-5">Nº</TableHead>
+                    <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5">Convidado</TableHead>
+                    <TableHead className="font-black text-white uppercase tracking-widest text-[10px] py-5">Vínculo/Detalhe</TableHead>
                     {!ignoreDetails && (
-                      <>
-
+                      <TableHead className="text-right font-black text-white uppercase tracking-widest text-[10px] py-5 pr-10">Qtd</TableHead>
+                    )}
+                    <TableHead className="w-24 text-right font-black text-white uppercase tracking-widest text-[10px] py-5 pr-10 print:hidden">Ações</TableHead>
+                    <TableHead className="w-20 text-center hidden print:table-cell font-black text-white uppercase tracking-widest text-[10px] py-5">Check</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {guests.map((g, idx) => (
+                    <TableRow key={g.id} className="not-italic hover:bg-zinc-50 transition-colors border-zinc-200 group">
+                      <TableCell className="text-center font-bold text-zinc-400">{idx + 1}</TableCell>
+                      <TableCell>
+                        <span className="font-bold text-ruby text-base">{g.nome}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-zinc-500 font-bold text-xs uppercase bg-zinc-100 px-3 py-1 rounded-lg border border-zinc-200">
+                          {g.detalhe || "Sem detalhe"}
+                        </span>
+                      </TableCell>
+                      {!ignoreDetails && (
                         <TableCell className="text-right pr-10">
                           <span className="text-zinc-900 font-bold text-sm">{g.quantidade}</span>
                         </TableCell>
-                      </>
-                    )}
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-1 transition-all">
-                        <button onClick={() => handleOpenEdit(g)} className="p-2 text-zinc-400 hover:text-blue-500 cursor-pointer"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(g.id)} className="p-2 text-zinc-400 hover:text-red-500 cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                      )}
+                      <TableCell className="text-right pr-6 print:hidden">
+                        <div className="flex items-center justify-end gap-1 transition-all">
+                          <button onClick={() => handleOpenEdit(g)} className="p-2 text-zinc-400 hover:text-blue-500 cursor-pointer"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(g.id)} className="p-2 text-zinc-400 hover:text-red-500 cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden print:table-cell text-center">
+                        <span className="text-lg font-black text-zinc-800">( )</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       </div>
       

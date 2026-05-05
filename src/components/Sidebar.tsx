@@ -134,7 +134,6 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           <div className="mt-1 ml-9 space-y-1">
             <Link href={`${base}/eventos/listar`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Listar</Link>
             <Link href={`${base}/eventos/cadastrar`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Cadastrar</Link>
-            <Link href={`${base}/eventos/checkin`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Check-in</Link>
           </div>
         </div>
 
@@ -149,10 +148,9 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           </div>
           <div className="mt-1 ml-9 space-y-1">
             <Link href={`${base}/convidados/gerar-lista`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Gerar Lista</Link>
-            <Link href={`${base}/convidados/checkin`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Check-in Online</Link>
+            <Link href={`${base}/checkin`} onClick={onClose} className="block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest text-zinc-600 hover:text-ruby hover:bg-ruby/5 transition-all">- Check-in</Link>
           </div>
         </div>
-        
 
 
         <Link 
@@ -173,23 +171,6 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           Relatórios
         </Link>
 
-        {/* Financeiro */}
-        <div className="pt-2">
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 cursor-pointer hover:bg-white/5 transition-all">
-            <div className="flex items-center gap-3">
-              <Wallet className="w-[17px] h-[17px] text-zinc-600" />
-              Financeiro
-            </div>
-            <ChevronDown className="w-4 h-4 text-zinc-600" />
-          </div>
-          <div className="mt-1 ml-9 space-y-1">
-            <Link href={`${base}/eventos/despesas`} onClick={onClose} className={`block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/eventos/despesas') ? 'text-ruby' : 'text-zinc-600 hover:text-ruby hover:bg-ruby/5'}`}>- Despesas</Link>
-            <Link href={`${base}/financeiro/notas`} onClick={onClose} className={`block px-3 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/financeiro/notas') ? 'text-ruby' : 'text-zinc-600 hover:text-ruby hover:bg-ruby/5'}`}>
-              - Notas & Recibos
-              <span className="ml-1.5 text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-black">NOVO</span>
-            </Link>
-          </div>
-        </div>
 
 
         <Link
@@ -201,14 +182,6 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           Configurações
         </Link>
 
-        <Link
-          href={`${base}/configuracoes/organizacao`}
-          onClick={onClose}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all ${isActive('/configuracoes/organizacao') ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
-        >
-          <FileText className={`w-[17px] h-[17px] ${isActive('/configuracoes/organizacao') ? 'text-ruby' : 'text-zinc-600'}`} />
-          Organização
-        </Link>
       </nav>
 
       {/* User Dropdown */}

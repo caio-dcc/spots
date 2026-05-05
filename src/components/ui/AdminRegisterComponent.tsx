@@ -5,6 +5,7 @@ import { useState } from 'react'
 import Image from 'next/image';
 import Link from 'next/link';
 import { Mail, Lock, ArrowRight, Loader2, User, Phone, Building, FileText } from 'lucide-react';
+import { supabase } from "@/lib/supabase";
 
 interface InputProps {
   label?: string;
@@ -71,21 +72,50 @@ const AppInput = (props: InputProps) => {
   )
 }
 
+const AppTextarea = (props: any) => {
+  const { placeholder, ...rest } = props;
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  return (
+    <div className="w-full relative">
+      <div className="relative w-full">
+        <textarea
+          className="peer relative z-10 !border-white/20 w-full rounded-2xl !bg-black/40 backdrop-blur-sm px-6 py-4 font-bold !text-white outline-none transition-all duration-200 ease-in-out focus:bg-white/15 focus:border-white/60 placeholder:text-white/70 placeholder:font-medium min-h-[120px] resize-none"
+          placeholder={placeholder}
+          onMouseMove={handleMouseMove}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          {...rest}
+        />
+        {isHovering && (
+          <>
+            <div
+              className="absolute pointer-events-none top-0 left-0 right-0 h-[2px] z-20 rounded-t-md overflow-hidden"
+              style={{
+                background: `radial-gradient(30px circle at ${mousePosition.x}px 0px, var(--color-accent) 0%, transparent 70%)`,
+              }}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 interface AdminRegisterComponentProps {
     accentColor?: string;
     accentRGB?: string;
     onLoginSubmit?: (email: string, pass: string) => void;
-    onRegisterSubmit?: (data: {
-      email: string;
-      password: string;
-      organizerName: string;
-      organizationName: string;
-      whatsapp: string;
-      phone?: string;
-      cnpj: string;
-      termsAccepted: boolean;
-      requestQuote: boolean;
-    }) => void;
+    onRegisterSubmit?: (data: any) => void;
     loading?: boolean;
     image?: string;
 }
@@ -94,24 +124,16 @@ const AdminRegisterComponent = ({
     accentColor = "#9B111E",
     accentRGB = "155, 17, 30",
     onLoginSubmit,
-    onRegisterSubmit,
     loading = false,
     image = "/bailarina.png",
 }: AdminRegisterComponentProps) => {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
   const [organizerName, setOrganizerName] = useState("");
-  const [organizationName, setOrganizationName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [phone, setPhone] = useState("");
-  const [cnpj, setCnpj] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [requestQuote, setRequestQuote] = useState(false);
+  const [message, setMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const leftSection = e.currentTarget.getBoundingClientRect();
@@ -126,29 +148,26 @@ const AdminRegisterComponent = ({
       if (onLoginSubmit) onLoginSubmit(loginEmail, loginPassword);
   }
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!termsAccepted) {
-        alert("Você deve aceitar os Termos de Serviço para continuar");
-        return;
-      }
-      if (!cnpj.trim()) {
-        alert("CNPJ é obrigatório para pagamentos via Stripe");
-        return;
-      }
-      if (onRegisterSubmit) {
-        onRegisterSubmit({
+      
+      const text = `*Novo Registro de Organizador*\n\n*Nome:* ${organizerName}\n*E-mail:* ${registerEmail}\n*Mensagem:* ${message}`;
+      const encodedText = encodeURIComponent(text);
+      
+      // Salvar no banco de dados
+      try {
+        await supabase.from('access_requests').insert({
+          full_name: organizerName,
           email: registerEmail,
-          password: registerPassword,
-          organizerName,
-          organizationName,
-          whatsapp,
-          phone,
-          cnpj,
-          termsAccepted,
-          requestQuote,
+          message: message
         });
+      } catch (error) {
+        console.error("Erro ao salvar solicitação:", error);
       }
+
+      window.open(`https://wa.me/5521974026883?text=${encodedText}`, '_blank');
+      
+      setShowSuccess(true);
   };
 
   return (
@@ -176,127 +195,65 @@ const AdminRegisterComponent = ({
             <form className='grid gap-8' onSubmit={handleRegisterSubmit}>
               <div className='flex flex-col items-center gap-4 mb-2 min-h-[160px] justify-center'>
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <span className='text-ruby font-black uppercase tracking-[0.3em] text-xs'>NOVO ORGANIZADOR</span>
-                  <h2 className='text-2xl md:text-3xl font-black text-white tracking-tighter uppercase'>Registre sua Organização</h2>
+                  <span className='text-ruby font-black uppercase tracking-[0.3em] text-xs'>SOLICITAR ACESSO</span>
+                  <h2 className='text-2xl md:text-3xl font-black text-white tracking-tighter uppercase'>Novo Organizador</h2>
                   <p className='text-[10px] font-bold text-white/50 uppercase tracking-widest leading-relaxed max-w-xs mt-2'>
-                    Comece a gerenciar seus eventos e ingressos profissionalmente
+                    Solicite sua conta de teste para começar a gerenciar sua produção
                   </p>
                 </div>
               </div>
 
-              <div className='grid gap-6'>
-                <AppInput
-                    placeholder="Seu Nome Completo *"
-                    type="text"
-                    value={organizerName}
-                    onChange={(e) => setOrganizerName(e.target.value)}
-                    icon={<User size={18} />}
-                    required
-                />
-                <AppInput
-                    placeholder="Nome da Organização / Casa de Show *"
-                    type="text"
-                    value={organizationName}
-                    onChange={(e) => setOrganizationName(e.target.value)}
-                    icon={<Building size={18} />}
-                    required
-                />
-                <AppInput
-                    placeholder="CNPJ (para pagamentos) *"
-                    type="text"
-                    value={cnpj}
-                    onChange={(e) => setCnpj(e.target.value.replace(/\D/g, ''))}
-                    icon={<FileText size={18} />}
-                    maxLength={14}
-                    required
-                />
-                <AppInput
-                    placeholder="E-mail *"
-                    type="email"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    icon={<Mail size={18} />}
-                    required
-                />
-                <AppInput
-                    placeholder="WhatsApp (com DDD) *"
-                    type="tel"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    icon={<Phone size={18} />}
-                    required
-                />
-                <AppInput
-                    placeholder="Telefone Profissional"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    icon={<Phone size={18} />}
-                />
-                <AppInput
-                    placeholder="Senha (mín. 8 caracteres) *"
-                    type="password"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    required
-                />
-
-                <label className='flex items-start gap-3 cursor-pointer'>
-                  <input
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="w-5 h-5 rounded border-2 border-white/30 cursor-pointer accent-ruby mt-1"
-                    required
-                  />
-                  <span className='text-xs text-white/70'>Concordo com os <a href="#" className="underline hover:text-white">Termos de Serviço</a> *</span>
-                </label>
-
-                <label className='flex items-center gap-3 cursor-pointer'>
-                  <input
-                    type="checkbox"
-                    checked={requestQuote}
-                    onChange={(e) => setRequestQuote(e.target.checked)}
-                    className="w-5 h-5 rounded border-2 border-white/30 cursor-pointer accent-ruby"
-                  />
-                  <span className='text-sm text-white/70'>Desejo receber ofertas via email</span>
-                </label>
-              </div>
-
               {!showSuccess ? (
-                <div className='flex flex-col items-center lg:items-start gap-4'>
-                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="group/button relative inline-flex justify-center items-center overflow-hidden rounded-2xl bg-[var(--color-accent)] px-10 py-5 text-xs font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-[var(--color-accent)]/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:shadow-[var(--color-accent)]/40 hover:scale-105"
-                  >
-                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                          <>
-                              <span>Registrar</span>
-                              <ArrowRight className="w-4 h-4 ml-2 group-hover/button:translate-x-1 transition-transform" />
-                          </>
-                      )}
+                <>
+                  <div className='grid gap-6'>
+                    <AppInput
+                        placeholder="Seu Nome Completo *"
+                        type="text"
+                        value={organizerName}
+                        onChange={(e) => setOrganizerName(e.target.value)}
+                        icon={<User size={18} />}
+                        required
+                    />
+                    <AppInput
+                        placeholder="E-mail Corporativo *"
+                        type="email"
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        icon={<Mail size={18} />}
+                        required
+                    />
+                    <AppTextarea 
+                        placeholder="Conte-nos sobre sua organização ou evento..."
+                        value={message}
+                        onChange={(e: any) => setMessage(e.target.value)}
+                        required
+                    />
+                  </div>
+
+                  <div className='flex flex-col items-center lg:items-start gap-4'>
+                    <button
+                      type="submit"
+                      className="group/button relative inline-flex justify-center items-center overflow-hidden rounded-2xl bg-[var(--color-accent)] px-10 py-5 text-xs font-black text-white uppercase tracking-[0.2em] shadow-xl shadow-[var(--color-accent)]/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:shadow-[var(--color-accent)]/40 hover:scale-105"
+                    >
+                      <span>Solicitar Registro</span>
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover/button:translate-x-1 transition-transform" />
                       <div className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-13deg)_translateX(-100%)] group-hover/button:duration-1000 group-hover/button:[transform:skew(-13deg)_translateX(100%)]">
                           <div className="relative h-full w-8 bg-white/20" />
                       </div>
-                  </button>
-
-                  <Link 
-                    href="/login" 
-                    className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] hover:text-white transition-colors flex items-center gap-2 group/customer"
-                  >
-                    <span className="w-4 h-[1px] bg-white/20 group-hover/customer:w-8 group-hover/customer:bg-white transition-all"></span>
-                    Login de Clientes
-                  </Link>
-                </div>
+                    </button>
+                  </div>
+                </>
               ) : (
-                <div className='p-6 bg-ruby/20 border border-ruby rounded-2xl text-center'>
-                  <p className='text-white font-black uppercase tracking-widest text-sm mb-2'>✓ Conta Criada!</p>
-                  {requestQuote && (
-                    <p className='text-white/80 text-xs leading-relaxed'>
-                      Spotlight foi contatada para sua requisição de orçamento. Você receberá um e-mail em breve.
+                <div className='overflow-hidden'>
+                  <div className='p-8 bg-ruby/10 border border-ruby/30 rounded-[2rem] text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700'>
+                    <div className='w-16 h-16 rounded-full bg-ruby/20 border border-ruby/40 flex items-center justify-center mx-auto mb-2'>
+                      <Mail className='w-8 h-8 text-ruby' />
+                    </div>
+                    <h3 className='text-white font-black uppercase tracking-widest text-lg'>Solicitação Enviada!</h3>
+                    <p className='text-zinc-400 text-xs leading-relaxed uppercase font-bold tracking-tight'>
+                      Após o registro, o acesso à versão de teste será avaliado e você receberá uma resposta em breve.
                     </p>
-                  )}
+                  </div>
                 </div>
               )}
             </form>

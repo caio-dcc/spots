@@ -35,9 +35,13 @@ export function ModuleNav() {
           .eq('id', session.user.id)
           .single();
         
-        if (profile?.full_name) {
-          setFirstName(profile.full_name.split(' ')[0]);
-        }
+        const name = profile?.full_name 
+          || session.user.user_metadata?.full_name 
+          || session.user.user_metadata?.name 
+          || session.user.email?.split('@')[0] 
+          || "Usuário";
+          
+        setFirstName(name);
       }
     };
 
@@ -51,7 +55,12 @@ export function ModuleNav() {
           .select('full_name')
           .eq('id', session.user.id)
           .single();
-        if (profile?.full_name) setFirstName(profile.full_name.split(' ')[0]);
+        const name = profile?.full_name 
+          || session.user.user_metadata?.full_name 
+          || session.user.user_metadata?.name 
+          || session.user.email?.split('@')[0] 
+          || "Usuário";
+        setFirstName(name);
       } else {
         setFirstName("");
       }
@@ -80,9 +89,6 @@ export function ModuleNav() {
 
   const navLinks = [
     { label: 'Início', href: '/' },
-    { label: 'Para Clientes', href: isLoggedIn ? '/mosaico-eventos' : '/login' },
-    ...(!isLoggedIn ? [{ label: 'Para Organizadores', href: '/house/login' }] : []),
-    { label: 'F.A.Q', href: '/faq' },
     { label: 'Sobre', href: '/sobre' },
   ];
 
@@ -139,53 +145,22 @@ export function ModuleNav() {
         >
           <Menu className="w-6 h-6" />
         </button>        {/* Right Actions - Also updated Log in font size to 12px */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           {!isLoggedIn ? (
             <>
               <Link 
-                href="/login" 
+                href="/house/login" 
                 className="text-[12px] font-black uppercase tracking-[0.2em] text-white/70 hover:text-white transition-colors md:block hidden"
               >
                 Log in
               </Link>
-              
-              <div className="group relative">
-                <button className="px-6 py-3 rounded-full bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-200 transition-all active:scale-95 flex items-center gap-2 cursor-pointer">
-                  Registrar-se
-                  <ChevronDown className="w-3 h-3 transition-transform duration-300 group-hover:rotate-180" />
-                </button>
-                
-                {/* Dropdown */}
-                <div className="absolute top-full right-0 pt-4 w-64 opacity-0 translate-y-4 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300">
-                  <div className="bg-zinc-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-3 shadow-2xl overflow-hidden">
-                    <Link href="/login">
-                      <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer">
-                        <div className="w-10 h-10 rounded-xl bg-ruby/20 flex items-center justify-center border border-ruby/30">
-                          <UserCircle className="w-5 h-5 text-ruby" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-white text-[10px] font-black uppercase tracking-widest">Sou Cliente</span>
-                          <span className="text-zinc-500 text-[9px] uppercase font-bold tracking-tighter">Quero comprar</span>
-                        </div>
-                      </div>
-                    </Link>
-                    
-                    <div className="h-[1px] bg-white/5 my-1 mx-4" />
 
-                    <Link href="/house/login">
-                      <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
-                          <Building className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-white text-[10px] font-black uppercase tracking-widest">Organizador</span>
-                          <span className="text-zinc-500 text-[9px] uppercase font-bold tracking-tighter">Quero gerenciar</span>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <Link 
+                href="/solucoes-enterprise" 
+                className="px-6 py-3 rounded-full bg-transparent border border-white/20 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-xl shadow-white/5"
+              >
+                Soluções Enterprise
+              </Link>
             </>
           ) : (
             <div className="group relative">
@@ -227,17 +202,18 @@ export function ModuleNav() {
 
                   <div className="h-[1px] bg-white/5 my-2 mx-4" />
 
-                  <button onClick={handleLogout} className="w-full">
-                    <div className="flex items-center gap-4 p-4 rounded-2xl hover:bg-ruby/10 group/logout transition-all cursor-pointer text-left">
-                      <div className="w-10 h-10 rounded-xl bg-ruby/20 flex items-center justify-center border border-ruby/30 text-ruby">
-                        <LogOut className="w-5 h-5" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-ruby text-[10px] font-black uppercase tracking-widest text-left">Sair</span>
-                        <span className="text-ruby/60 text-[9px] uppercase font-bold tracking-tighter text-left">Encerrar sessão</span>
-                      </div>
+                  <div 
+                    onClick={handleLogout} 
+                    className="flex items-center gap-4 p-4 rounded-2xl hover:bg-ruby/10 group/logout transition-all cursor-pointer text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-ruby/20 flex items-center justify-center border border-ruby/30 text-ruby">
+                      <LogOut className="w-5 h-5" />
                     </div>
-                  </button>
+                    <div className="flex flex-col">
+                      <span className="text-ruby text-[10px] font-black uppercase tracking-widest text-left">Sair</span>
+                      <span className="text-ruby/60 text-[9px] uppercase font-bold tracking-tighter text-left">Encerrar sessão</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

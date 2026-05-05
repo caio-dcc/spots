@@ -10,7 +10,6 @@ import { LocationForm } from "@/components/LocationForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Building2, MapPin, DollarSign, Users, Plus, Edit2, Sun } from "lucide-react";
-import { StripeConnectPanel } from "@/components/StripeConnectPanel";
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
@@ -29,7 +28,6 @@ export default function ConfiguracoesPage() {
   const [loadingTheaters, setLoadingTheaters] = useState(false);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any>(null);
-  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -47,12 +45,6 @@ export default function ConfiguracoesPage() {
       setUsername(user.user_metadata?.full_name || "");
       setEmail(user.email || "");
 
-      const { data: profileRow } = await supabase
-        .from("profiles")
-        .select("stripe_account_id")
-        .eq("id", user.id)
-        .single();
-      setStripeAccountId(profileRow?.stripe_account_id ?? null);
 
       // Verificar se sou membro de alguém
       const { data: membership } = await supabase.from('team_members').select('owner_id').eq('member_id', user.id).single();
@@ -230,23 +222,6 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
-        {isSudo && (
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2 border-b border-zinc-100 dark:border-zinc-800 pb-2 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
-              Recebimentos (Stripe)
-            </h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-              Conecte sua conta para receber o valor líquido das vendas. A divisão com a
-              plataforma é feita automaticamente no pagamento — você não configura chaves
-              secretas aqui.
-            </p>
-            <StripeConnectPanel
-              stripeAccountId={stripeAccountId}
-              compact={!stripeAccountId}
-            />
-          </div>
-        )}
 
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
           <div className="flex justify-between items-center mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-4">

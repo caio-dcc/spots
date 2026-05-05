@@ -2,7 +2,7 @@
 
 import { BlurText } from "@/components/ui/BlurText";
 import { Footer } from "@/components/Footer";
-import { Zap, Shield, Users, BarChart3, Ticket, Globe, Loader2 } from "lucide-react";
+import { Zap, Shield, Users, BarChart3, Globe } from "lucide-react";
 import Link from "next/link";
 
 export default function SobrePage() {
@@ -10,27 +10,22 @@ export default function SobrePage() {
     {
       icon: <Zap className="w-6 h-6 text-ruby" />,
       title: "Alta Disponibilidade",
-      description: "Infraestrutura elástica pronta para picos massivos de tráfego em lançamentos de grandes tours."
+      description: "Infraestrutura elástica pronta para picos de acesso em produções simultâneas de grande porte."
     },
     {
       icon: <Shield className="w-6 h-6 text-ruby" />,
       title: "Segurança Nível Bancário",
-      description: "Processamento via Stripe com conformidade PCI-DSS, garantindo transações blindadas contra fraudes."
+      description: "Processamento de dados com criptografia de ponta e conformidade total, garantindo auditoria blindada."
     },
     {
       icon: <Users className="w-6 h-6 text-ruby" />,
       title: "Gestão de Staff Pro",
-      description: "Controle centralizado de equipes de produção, segurança e logística com logs de auditoria detalhados."
+      description: "Controle centralizado de equipes de produção, freelancers e logística com logs de auditoria detalhados."
     },
     {
       icon: <BarChart3 className="w-6 h-6 text-ruby" />,
       title: "Revenue Intelligence",
-      description: "Transformação de dados brutos em insights financeiros, ROI e lucratividade real por evento."
-    },
-    {
-      icon: <Ticket className="w-6 h-6 text-ruby" />,
-      title: "Smart Check-in",
-      description: "Algoritmo de validação ultra-rápido que processa fluxos massivos de público sem latência."
+      description: "Transformação de dados operacionais em insights financeiros, ROI e lucratividade real por espetáculo."
     },
     {
       icon: <Globe className="w-6 h-6 text-ruby" />,
@@ -53,7 +48,7 @@ export default function SobrePage() {
           
           <p className="text-white/70 text-xl font-medium leading-relaxed">
             O ecossistema <span className="text-white font-bold">Spotlight</span> foi projetado para elevar o padrão da produção cultural. 
-            Nossa plataforma consolida a gestão de bilheteria multicanal, inteligência financeira data-driven e logística operacional de campo 
+            Nossa plataforma consolida a gestão operacional de backstage, inteligência financeira data-driven e logística de campo 
             em uma infraestrutura única de alta performance.
           </p>
         </div>
@@ -83,18 +78,18 @@ export default function SobrePage() {
             </h2>
             <div className="space-y-4 text-zinc-400">
               <p>
-                Diferente de ticketeiras comuns que apenas vendem ingressos, nós oferecemos o ciclo completo da produção. 
-                Desde a contratação do staff até o fechamento do relatório financeiro com lucro líquido calculado.
+                Diferente de sistemas genéricos, nós oferecemos o ciclo completo da produção cultural. 
+                Desde a contratação do staff e gestão de freelancers até o fechamento do relatório financeiro com lucro líquido calculado.
               </p>
               <p>
-                Nossa arquitetura foi desenhada para alta performance, garantindo que o checkout funcione perfeitamente 
-                mesmo em picos de vendas simultâneas.
+                Nossa arquitetura foi desenhada para alta performance, garantindo que o controle de backstage e auditoria funcione perfeitamente 
+                mesmo em produções de grande escala e alta complexidade.
               </p>
             </div>
             
             <div className="pt-4">
-              <Link href="/organizadores">
-                <button className="px-8 py-4 bg-white text-black font-black uppercase text-xs tracking-widest rounded-xl hover:bg-zinc-200 transition-all">
+              <Link href="/house/login">
+                <button className="px-10 py-5 rounded-full bg-transparent border border-white/20 text-white font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-white/10 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
                   Começar agora
                 </button>
               </Link>
@@ -103,10 +98,6 @@ export default function SobrePage() {
 
           <div className="bg-gradient-to-br from-ruby/20 to-transparent p-1 rounded-3xl">
              <div className="bg-black/90 backdrop-blur-2xl rounded-3xl p-10 border border-white/10 space-y-8">
-                <div className="space-y-2">
-                  <span className="text-ruby font-black text-4xl italic">0%</span>
-                  <p className="text-white/60 text-xs uppercase tracking-widest">Taxa de implantação</p>
-                </div>
                 <div className="space-y-2">
                   <span className="text-white font-black text-4xl italic">100%</span>
                   <p className="text-white/60 text-xs uppercase tracking-widest">Controle financeiro</p>

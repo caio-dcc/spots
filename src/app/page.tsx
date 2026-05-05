@@ -50,7 +50,7 @@ export default function HomePage() {
           <div className="space-y-8 transition-all duration-700 order-2 lg:order-1">
             <div className="flex items-center gap-2 text-white/70">
               <Check className="w-4 h-4 text-ruby" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Plataforma Profissional</span>
+              <span className="text-[12px] font-black uppercase tracking-[0.3em]">Plataforma profissional de gestão teatral</span>
             </div>
 
             <BlurText
@@ -67,15 +67,15 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row gap-4">
               {authChecked && !isLoggedIn && (
-                <Link href="/login" className="w-full sm:w-auto">
-                  <button className="w-full px-10 py-5 rounded-full bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-zinc-200 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
+                <Link href="/house/login" className="w-full sm:w-auto">
+                  <button className="w-full px-10 py-5 rounded-full bg-transparent border border-white/20 text-white font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-white/10 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
                     Começar Agora
                   </button>
                 </Link>
               )}
               {isLoggedIn && (
                 <Link href="/dashboard" className="w-full sm:w-auto">
-                  <button className="w-full px-10 py-5 rounded-full bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-zinc-200 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
+                  <button className="w-full px-10 py-5 rounded-full bg-transparent border border-white/20 text-white font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-white/10 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
                     Acessar Dashboard
                   </button>
                 </Link>

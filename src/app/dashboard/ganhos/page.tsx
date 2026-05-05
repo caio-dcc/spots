@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { TrendingUp, AlertCircle, DollarSign, TrendingDown } from "lucide-react";
-import { StripeConnectPanel } from "@/components/StripeConnectPanel";
 
 interface EarningsData {
   totalSales: number;
@@ -21,21 +20,8 @@ export default function GanhosPage() {
   const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
-  const [stripeError, setStripeError] = useState<string | null>(null);
-  const [stripeSuccess, setStripeSuccess] = useState(false);
 
   useEffect(() => {
-    // Verifica se houve sucesso ou erro na conexão Stripe
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe_success")) {
-      setStripeSuccess(true);
-      window.history.replaceState({}, "", "/dashboard/ganhos");
-    }
-    if (params.get("stripe_error")) {
-      setStripeError(params.get("stripe_error"));
-      window.history.replaceState({}, "", "/dashboard/ganhos");
-    }
 
     fetchEarnings();
   }, []);
@@ -51,15 +37,6 @@ export default function GanhosPage() {
         throw new Error("Usuário não autenticado");
       }
 
-      // Busca dados do perfil (stripe_account_id)
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("stripe_account_id")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError) throw profileError;
-      setStripeAccountId(profile?.stripe_account_id || null);
 
       // Busca eventos do organizador
       const { data: events, error: eventsError } = await supabase
@@ -91,8 +68,8 @@ export default function GanhosPage() {
 
       // Calcula totais
       const totalSales = orders?.reduce((sum, o) => sum + o.total_amount, 0) || 0;
-      const platformFee = orders?.reduce((sum, o) => sum + o.platform_fee, 0) || 0;
-      const netEarnings = totalSales - platformFee;
+      const platformFee = 0;
+      const netEarnings = totalSales;
 
       // Agrupa por evento
       const eventSales = events.map((event) => {
@@ -135,30 +112,6 @@ export default function GanhosPage() {
         <p className="text-muted-foreground">Acompanhe seu faturamento e saldo disponível</p>
       </div>
 
-      {/* Alertas */}
-      {stripeSuccess && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 flex items-start gap-3">
-          <TrendingUp className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-white">Stripe Conectado!</h3>
-            <p className="text-sm text-white/60 mt-1">
-              Sua conta Stripe está pronta. Os pagamentos agora serão depositados diretamente.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {stripeError && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-white">Erro na Conexão</h3>
-            <p className="text-sm text-white/60 mt-1">{stripeError}</p>
-          </div>
-        </div>
-      )}
-
-      <StripeConnectPanel stripeAccountId={stripeAccountId} />
 
       {/* Cards de Resumo */}
       {earnings && (
@@ -177,17 +130,6 @@ export default function GanhosPage() {
             </p>
           </div>
 
-          {/* Taxa Spotlight */}
-          <div className="bg-white/5 border border-white/10 rounded-lg p-6 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-white/60 font-semibold">Taxa Spotlight (5%)</p>
-              <TrendingDown className="w-5 h-5 text-amber-500/60" />
-            </div>
-            <p className="text-3xl font-bold text-amber-500">
-              -R$ {earnings.platformFee.toFixed(2)}
-            </p>
-            <p className="text-xs text-white/50 pt-2">Custo operacional</p>
-          </div>
 
           {/* Ganho Líquido */}
           <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30 rounded-lg p-6 space-y-2">
@@ -199,7 +141,7 @@ export default function GanhosPage() {
               R$ {earnings.netEarnings.toFixed(2)}
             </p>
             <p className="text-xs text-white/50 pt-2">
-              Disponível para saque {stripeAccountId ? "em breve" : "após conectar Stripe"}
+              Processado via painel Spotlight
             </p>
           </div>
         </div>

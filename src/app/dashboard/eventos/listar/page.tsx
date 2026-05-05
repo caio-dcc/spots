@@ -45,19 +45,6 @@ export default function ListarEventosPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [isGuestListOpen, setIsGuestListOpen] = useState(false);
-  const [guestListEvent, setGuestListEvent] = useState<any>(null);
-  const [guestListGuests, setGuestListGuests] = useState<any[]>([]);
-  const [loadingGuests, setLoadingGuests] = useState(false);
-  
-  // Guest Edit Modal State
-  const [editingGuest, setEditingGuest] = useState<any>(null);
-  const [editName, setEditName] = useState("");
-  const [editQuantity, setEditQuantity] = useState(1);
-  const [editBenefit, setEditBenefit] = useState("");
-  const [eventBenefits, setEventBenefits] = useState<any[]>([]);
-  
-  // Lifecycle States
   const [activeEvent, setActiveEvent] = useState<any>(null);
   const [isStartConfirmOpen, setIsStartConfirmOpen] = useState(false);
   const [isFinishConfirmOpen, setIsFinishConfirmOpen] = useState(false);
@@ -135,24 +122,6 @@ export default function ListarEventosPage() {
 
           e.guestsCount = eGuests.reduce((acc, g) => acc + (g.quantity || 1), 0);
           e.checkedInCount = eGuests.filter(g => g.checked_in).length;
-          
-          // Receita: Soma de cada convidado * valor do seu benefício
-          const revenue = eGuests.reduce((acc, g) => {
-            const ben = eBenefits.find(b => b.id === g.benefit_id);
-            return acc + ((ben?.valor || 0) * (g.quantity || 1));
-          }, 0);
-
-          // Despesas: Equipe + Artistas (JSON) + Extras (JSON) + Aluguel Local
-          const staffCost = eStaff.reduce((acc, s) => acc + (s.tem_diaria ? (s.valor_diaria || 0) : 0), 0);
-          const artistCaches = (e.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
-          const extraExpenses = (e.extra_expenses || []).reduce((acc: number, ex: any) => acc + safeParse(ex.value || ex.amount || 0), 0);
-          const theaterRent = Number((e.theaters as any)?.rent_price || 0);
-
-          // Lucro Projetado = Receita - (Staff + Cachês + Despesas Extras + Aluguel + Taxa Spotlight)
-          const devFee = revenue * (revenue > 50000 ? 0.05 : 0.025);
-          e.projectedProfit = revenue - (staffCost + artistCaches + extraExpenses + theaterRent + devFee);
-          e.revenue = revenue;
-          e.theaterRent = theaterRent;
         });
       }
 
@@ -285,8 +254,7 @@ export default function ListarEventosPage() {
       const expensesTotal = (expensesData || []).reduce((acc: number, curr: any) => acc + (curr.amount || 0), 0);
       const artistCachesTotal = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
       const totalExpenses = staffTotal + expensesTotal + artistCachesTotal;
-      const currentFeePercent = grossRevenue > 50000 ? 0.05 : 0.025;
-      const devFee = grossRevenue * currentFeePercent;
+      const devFee = 0;
 
       // Update event with final numbers (agora inclui cachês de artistas)
       await supabase.from('events').update({
@@ -328,7 +296,7 @@ export default function ListarEventosPage() {
     const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
     const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
     
-    const devFee = revenue * currentFeePercent;
+    const devFee = 0;
     const profit = revenue - staffCosts - extraExpenses - artistCaches - devFee;
     
     const financialData = [
@@ -339,7 +307,6 @@ export default function ListarEventosPage() {
       { Informação: 'Cachês Artistas (-)', Valor: `R$ ${artistCaches.toFixed(2)}` },
       { Informação: 'Diárias Staff (-)', Valor: `R$ ${staffCosts.toFixed(2)}` },
       { Informação: 'Despesas Extras (-)', Valor: `R$ ${extraExpenses.toFixed(2)}` },
-      { Informação: `Taxa de Serviço Spotlight ${currentFeePercent * 100}% (-)`, Valor: `R$ ${devFee.toFixed(2)}` },
       { Informação: 'LUCRO LÍQUIDO (=)', Valor: `R$ ${profit.toFixed(2)}` },
       { Informação: '', Valor: '' },
       { Informação: 'DETALHES DE DESPESAS', Valor: '' },
@@ -417,7 +384,7 @@ export default function ListarEventosPage() {
       const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
       const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
       const theaterRent = Number((activeEvent.theaters as any)?.rent_price || 0);
-      const devFee = revenue * currentFeePercent;
+      const devFee = 0;
       const totalExpenses = staffCosts + extraExpenses + artistCaches + devFee + theaterRent;
       const profit = revenue - totalExpenses;
 
@@ -498,7 +465,6 @@ export default function ListarEventosPage() {
         ['Cachês de Artistas', '-', `R$ ${artistCaches.toLocaleString('pt-BR')}`],
         ['Diárias de Staff', '-', `R$ ${staffCosts.toLocaleString('pt-BR')}`],
         ['Despesas Extras', '-', `R$ ${extraExpenses.toLocaleString('pt-BR')}`],
-        [`Taxa Spotlight (${(currentFeePercent*100).toFixed(1)}%)`, '-', `R$ ${devFee.toLocaleString('pt-BR')}`],
       ];
 
       autoTable(doc, {
@@ -571,7 +537,7 @@ export default function ListarEventosPage() {
       const extraExpenses = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
       const artistCaches = (activeEvent.artistas || []).reduce((acc: number, a: any) => acc + safeParse(a.cache || a.fee || a.valor || a), 0);
       
-      const devFee = revenue * currentFeePercent;
+      const devFee = 0;
 
       doc.setFontSize(22);
       doc.setTextColor(225, 29, 72);
@@ -630,82 +596,7 @@ export default function ListarEventosPage() {
   };
 
 
-  const openGuestList = async (event: any) => {
-    setGuestListEvent(event);
-    setIsGuestListOpen(true);
-    setLoadingGuests(true);
-    try {
-      const { data } = await supabase.from('guests').select('id, name, quantity, checked_in, benefit_id').eq('event_id', event.id).order('name');
-      setGuestListGuests(data || []);
-      const { data: benefits } = await supabase.from('event_benefits').select('id, nome').eq('event_id', event.id);
-      setEventBenefits(benefits || []);
-    } catch (err) {
-      console.error(err);
-      toast.error('Erro ao buscar convidados');
-    } finally {
-      setLoadingGuests(false);
-    }
-  };
 
-  const toggleCheckIn = async (guest: any) => {
-    const newVal = !guest.checked_in;
-    // Update local state for immediate feedback
-    setGuestListGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checked_in: newVal } : g));
-    const { error } = await supabase.from('guests').update({ checked_in: newVal }).eq('id', guest.id);
-    if (error) {
-       toast.error("Erro ao atualizar check-in.");
-       setGuestListGuests(prev => prev.map(g => g.id === guest.id ? { ...g, checked_in: guest.checked_in } : g));
-    } else {
-       const { getContextUserId } = await import("@/lib/auth-context");
-       const userId = await getContextUserId();
-       if (userId) {
-         await logAction(userId, newVal ? 'REALIZOU CHECK-IN (LISTA)' : 'REMOVEU CHECK-IN (LISTA)', 'guests', guest.name);
-       }
-       toast.success(`Check-in ${newVal ? 'realizado' : 'cancelado'}!`);
-       setData(prev => prev.map(e => e.id === guestListEvent.id ? { ...e, checkedInCount: (e.checkedInCount || 0) + (newVal ? 1 : -1) } : e));
-    }
-  };
-
-  const openEditGuest = (guest: any) => {
-    setEditingGuest(guest);
-    setEditName(guest.name);
-    setEditQuantity(guest.quantity);
-    setEditBenefit(guest.benefit_id || "");
-  };
-
-  const handleSaveEditGuest = async () => {
-    if (!editingGuest) return;
-    if (editName.trim().length < 3) return;
-    
-    try {
-      const { error } = await supabase.from('guests').update({
-        name: editName.trim(),
-        quantity: editQuantity,
-        benefit_id: editBenefit || null
-      }).eq('id', editingGuest.id);
-      
-      if (error) throw error;
-      
-      setGuestListGuests(prev => prev.map(g => g.id === editingGuest.id ? {
-        ...g,
-        name: editName.trim(),
-        quantity: editQuantity,
-        benefit_id: editBenefit || null
-      } : g));
-      
-      const { getContextUserId } = await import("@/lib/auth-context");
-      const userId = await getContextUserId();
-      if (userId) {
-        await logAction(userId, 'EDITOU CONVIDADO (LISTA)', 'guests', editName.trim());
-      }
-
-      toast.success("Convidado atualizado com sucesso!");
-      setEditingGuest(null);
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao atualizar convidado.");
-    }
-  };
 
 
 
@@ -781,14 +672,6 @@ export default function ListarEventosPage() {
                          <span className="text-zinc-500 font-medium">Data:</span>
                          <span className="text-zinc-900 font-bold">{new Date(e.event_date).toLocaleDateString('pt-BR')}</span>
                        </div>
-                       {e.guestsCount > 0 && (
-                         <div className="flex justify-between w-full mb-1">
-                           <span className="text-zinc-500 font-medium">Lista:</span>
-                            <Button variant="ghost" size="sm" onClick={() => openGuestList(e)} className="h-6 px-2 text-ruby font-bold hover:bg-ruby/5 cursor-pointer">
-                             {e.checkedInCount} / {e.guestsCount} <Users className="w-3 h-3 ml-1" />
-                           </Button>
-                         </div>
-                       )}
                     </div>
                   </div>
 
@@ -903,10 +786,6 @@ export default function ListarEventosPage() {
                       {e.status === 'finalizado' && (
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-3 py-1 rounded-full mr-2">Finalizado</span>
                       )}
-                      <Button variant="ghost" size="sm" className="cursor-pointer font-bold p-2 h-8 text-zinc-900 hover:text-ruby" onClick={() => openGuestList(e)}>
-                        <Users className="w-4 h-4" />
-                        <span className="hidden md:inline ml-1">Lista ({e.checkedInCount}/{e.guestsCount})</span>
-                      </Button>
                       <Button variant="ghost" size="sm" className="cursor-pointer font-bold p-2 h-8 text-zinc-900 hover:text-ruby" onClick={() => router.push(`/dashboard/eventos/${e.id}`)}>
                         <Eye className="w-4 h-4" />
                         <span className="hidden md:inline ml-1">Inspecionar</span>
@@ -954,16 +833,6 @@ export default function ListarEventosPage() {
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/eventos/${e.id}`)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors">
                             <Eye className="w-4 h-4 text-zinc-400" />
                             Inspecionar
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem disabled={e.status === 'finalizado'} onClick={() => handleEdit(e)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors disabled:opacity-30">
-                            <Edit2 className="w-4 h-4 text-zinc-400" />
-                            Editar Dados
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem onClick={() => openGuestList(e)} className="flex items-center gap-2 px-2 py-2 rounded-lg font-bold text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer transition-colors">
-                            <Users className="w-4 h-4 text-zinc-400" />
-                            Lista de Convidados ({e.checkedInCount}/{e.guestsCount})
                           </DropdownMenuItem>
 
                           <DropdownMenuSeparator className="bg-zinc-100 my-1" />
@@ -1047,103 +916,6 @@ export default function ListarEventosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Guest List Modal */}
-      <Dialog open={isGuestListOpen} onOpenChange={setIsGuestListOpen}>
-        <DialogContent className="sm:max-w-[840px] p-0 overflow-hidden bg-white rounded-2xl">
-          <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-ruby" />
-                Lista de Convidados
-              </DialogTitle>
-              <DialogDescription className="text-zinc-500 font-medium">
-                {guestListEvent?.title} — {guestListEvent && new Date(guestListEvent.event_date).toLocaleDateString('pt-BR')}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          
-          <div className="p-0 max-h-[60vh] overflow-y-auto">
-            {loadingGuests ? (
-              <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-                <Loader2 className="w-8 h-8 animate-spin mb-2 text-ruby" />
-                <p className="font-medium">Carregando lista...</p>
-              </div>
-            ) : guestListGuests.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500 font-bold text-sm">Nenhum convidado nesta lista.</div>
-            ) : (
-              <Table>
-                <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                  <TableRow className="border-b border-zinc-100 hover:bg-transparent">
-                    <TableHead className="font-bold text-zinc-900 pl-6">Nome</TableHead>
-                    <TableHead className="font-bold text-zinc-900 text-center">Qtd</TableHead>
-                    <TableHead className="text-right font-bold text-zinc-900 pr-6">Check-in</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {guestListGuests.map((g, idx) => (
-                    <TableRow key={g.id} className={`border-b border-zinc-50 transition-colors ${g.checked_in ? 'bg-green-50/30' : 'hover:bg-zinc-50'}`}>
-                      <TableCell className="pl-6 font-bold text-ruby">{g.name}</TableCell>
-                      <TableCell className="text-center text-zinc-600 font-bold">{g.quantity}</TableCell>
-                      <TableCell className="text-right pr-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEditGuest(g)} className="text-zinc-400 hover:text-blue-500 cursor-pointer p-1"><Pencil className="w-4 h-4" /></button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => toggleCheckIn(g)}
-                            className={`h-8 w-8 p-0 rounded-full transition-all cursor-pointer ${g.checked_in ? 'text-green-600 hover:text-green-700 hover:bg-green-100 bg-green-50' : 'text-zinc-300 hover:text-ruby hover:bg-ruby/10'}`}
-                          >
-                            {g.checked_in ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-          <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
-             <div className="text-sm font-bold text-zinc-500">
-               {guestListGuests.filter(g => g.checked_in).length} de {guestListGuests.length} presentes
-             </div>
-             <Button variant="outline" onClick={() => setIsGuestListOpen(false)} className="rounded-xl cursor-pointer font-bold">Fechar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* Edit Guest Modal */}
-      <Dialog open={!!editingGuest} onOpenChange={(open) => !open && setEditingGuest(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Convidado</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-zinc-700">Nome do Convidado</label>
-              <Input value={editName} onChange={e => setEditName(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">Quantidade</label>
-                <select className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm cursor-pointer" value={editQuantity} onChange={e => setEditQuantity(Number(e.target.value))}>
-                  {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-zinc-700">Tipo de Ingresso</label>
-                <select className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm cursor-pointer" value={editBenefit} onChange={e => setEditBenefit(e.target.value)}>
-                  <option value="">Normal</option>
-                  {eventBenefits.map(b => <option key={b.id} value={b.id}>{b.nome}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingGuest(null)} className="cursor-pointer font-bold">Cancelar</Button>
-            <Button onClick={handleSaveEditGuest} className="bg-ruby hover:bg-ruby/90 text-white cursor-pointer font-bold">Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Start Confirmation */}
       <Dialog open={isStartConfirmOpen} onOpenChange={setIsStartConfirmOpen}>
@@ -1206,36 +978,34 @@ export default function ListarEventosPage() {
                 <p className="text-[7px] md:text-[8px] font-black text-zinc-400 uppercase tracking-widest mb-1">Presença</p>
                 <p className="text-xl md:text-2xl font-black text-ruby">
                   {(() => {
-                    const totalSoldByType = reportTicketTypes.reduce((acc, t) => acc + (t.quantity || 0), 0);
-                    const soldTickets = totalSoldByType > 0 ? totalSoldByType : (activeEvent?.capacity || 0);
-                    const totalGuests = reportGuests.reduce((acc, g) => acc + (g.quantity || 1), 0);
-                    const presentGuests = reportGuests.filter(g => g.checked_in).reduce((acc, g) => acc + (g.quantity || 1), 0);
-                    
-                    const ticketPresence = reportTicketTypes.reduce((acc, t) => acc + (t.attendance_count || 0), 0);
-                    // Se não houver tipos definidos, usamos o capacity total como se todos tivessem vindo (fallback antigo)
-                    const totalPresent = (reportTicketTypes.length > 0 ? ticketPresence : soldTickets) + presentGuests;
-                    const totalExpected = soldTickets + totalGuests;
-                    
-                    return totalExpected > 0 ? ((totalPresent / totalExpected) * 100).toFixed(0) : 0;
+                    const totalTicketsPaid = reportTicketTypes.reduce((acc, t) => acc + (t.quantity || 0), 0);
+                    const totalGuestsPresent = reportGuests.filter(g => g.checked_in).reduce((acc, g) => acc + (g.quantity || 1), 0);
+                    const totalPresent = totalTicketsPaid + totalGuestsPresent;
+                    const totalExpected = activeEvent?.capacity || 1;
+                    return Math.min(100, Math.round((totalPresent / totalExpected) * 100));
                   })()}%
                 </p>
               </div>
               <div className="bg-ruby/5 p-3 rounded-2xl border border-ruby/10 text-center col-span-2 md:col-span-1">
                 <p className="text-[7px] md:text-[8px] font-black text-ruby/60 uppercase tracking-widest mb-1">Lucro Líquido</p>
                 <p className={`text-xl md:text-2xl font-black ${
-                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                  reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                  reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)) >= 0 ? 'text-green-600' : 'text-ruby'
+                  (() => {
+                    const rev = reportTicketTypes.reduce((acc, t) => acc + ((t.quantity || 0) * (t.valor || 0)), 0) || ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0));
+                    const staffCost = reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0);
+                    const expCost = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+                    const artistCost = (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0);
+                    const net = rev - staffCost - expCost - artistCost;
+                    return net >= 0 ? 'text-green-600' : 'text-ruby';
+                  })()
                 }`}>
-                  R$ {(
-                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                  reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                  reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                  (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                  ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025))
-                  ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  R$ {(() => {
+                    const rev = reportTicketTypes.reduce((acc, t) => acc + ((t.quantity || 0) * (t.valor || 0)), 0) || ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0));
+                    const staffCost = reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0);
+                    const expCost = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+                    const artistCost = (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0);
+                    const net = rev - staffCost - expCost - artistCost;
+                    return net.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                  })()}
                 </p>
               </div>
             </div>
@@ -1246,15 +1016,14 @@ export default function ListarEventosPage() {
                 <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 space-y-2 font-mono text-[9px] md:text-xs">
                   <div className="flex justify-between text-zinc-500">
                     <span>Receita Ingressos</span>
-                    <span className="text-green-600 font-bold">R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-green-600 font-bold">R$ {(() => {
+                      const rev = reportTicketTypes.reduce((acc, t) => acc + ((t.quantity || 0) * (t.valor || 0)), 0) || ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0));
+                      return rev.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                    })()}</span>
                   </div>
                   <div className="flex justify-between text-zinc-500">
                     <span>Staff & Diárias</span>
                     <span className="text-ruby font-bold">- R$ {reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-500 italic">
-                    <span>Taxa Spotlight</span>
-                    <span className="text-ruby font-bold">- R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-zinc-500">
                     <span>Cachês Atrações</span>
@@ -1263,21 +1032,21 @@ export default function ListarEventosPage() {
                   <div className="pt-2 border-t border-zinc-200 flex justify-between text-xs md:text-sm font-black text-zinc-900 uppercase">
                     <span>Total Líquido</span>
                     <span className="text-zinc-900">
-                      R$ {(
-                      ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) - 
-                      reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0) - 
-                      reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0) -
-                      (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0) -
-                      ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025))
-                      ).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(() => {
+                        const rev = reportTicketTypes.reduce((acc, t) => acc + ((t.quantity || 0) * (t.valor || 0)), 0) || ((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0));
+                        const staffCost = reportStaff.reduce((acc, curr) => acc + (curr.valor_diaria || 0), 0);
+                        const expCost = reportExpenses.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+                        const artistCost = (activeEvent?.artistas || []).reduce((acc: number, curr: any) => acc + safeParse(curr.cache || curr.fee || curr.valor || curr), 0);
+                        return (rev - staffCost - expCost - artistCost).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                      })()}
                     </span>
                   </div>
                 </div>
 
                 <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 max-h-32 overflow-y-auto custom-scrollbar">
                   <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-2">Despesas Detalhadas</p>
-                  {reportExpenses.map((exp) => (
-                    <div key={exp.id} className="flex justify-between text-[8px] md:text-[10px] py-1 border-b border-zinc-100 last:border-0">
+                  {reportExpenses.map((exp, idx) => (
+                    <div key={exp.id || `exp-${idx}`} className="flex justify-between text-[8px] md:text-[10px] py-1 border-b border-zinc-100 last:border-0">
                       <span className="text-zinc-600 truncate mr-2">{exp.description}</span>
                       <span className="font-bold text-ruby shrink-0">R$ {exp.amount.toFixed(2)}</span>
                     </div>
@@ -1288,11 +1057,11 @@ export default function ListarEventosPage() {
                 {/* Ticket Types Breakdown Section (Novo) */}
                 <div className="bg-zinc-50 rounded-2xl p-4 border border-zinc-100 max-h-32 overflow-y-auto custom-scrollbar">
                   <p className="text-[7px] font-black text-zinc-400 uppercase tracking-widest mb-2">Comparecimento por Tipo</p>
-                  {reportTicketTypes.map((type) => (
-                    <div key={type.id} className="flex justify-between text-[8px] md:text-[10px] py-1 border-b border-zinc-100 last:border-0">
+                  {reportTicketTypes.map((type, idx) => (
+                    <div key={type.id || `type-${idx}`} className="flex justify-between text-[8px] md:text-[10px] py-1 border-b border-zinc-100 last:border-0">
                       <span className="text-zinc-600 truncate mr-2">{type.nome}</span>
                       <div className="flex gap-2 font-bold shrink-0">
-                        <span className="text-ruby">{type.attendance_count || 0}</span>
+                        <span className="text-ruby">{type.quantity}</span>
                         <span className="text-zinc-300">/</span>
                         <span className="text-zinc-500">{type.quantity}</span>
                       </div>
@@ -1302,26 +1071,6 @@ export default function ListarEventosPage() {
                 </div>
               </div>
 
-              {/* QR Code Section - More compact */}
-              <div className="bg-zinc-900 rounded-3xl p-5 text-white flex flex-col items-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-ruby/20 to-transparent opacity-40" />
-                <div className="relative z-10 w-full flex flex-col items-center">
-                  <p className="text-[7px] font-black text-ruby uppercase tracking-[0.2em] mb-1">Taxa de Serviço</p>
-                  <h4 className="text-lg md:text-xl font-black mb-3">
-                    R$ {((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0) * (((activeEvent?.capacity || 0) * (activeEvent?.ticket_price || 0)) > 50000 ? 0.05 : 0.025)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </h4>
-                  <div className="w-24 h-24 bg-white rounded-xl p-1.5 mb-3 shadow-xl">
-                    <img src="/spotlight_pix_qr_code.png" alt="Pix QR" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="w-full space-y-2">
-                    <p className="text-[8px] text-zinc-400 text-center leading-tight">Escaneie para pagar via PIX ou copie a chave:</p>
-                    <div className="bg-white/10 rounded-lg p-1.5 flex items-center justify-between">
-                       <span className="text-[8px] font-mono text-zinc-300 truncate mr-1">financeiro@spotlight.com.br</span>
-                       <button className="text-[7px] font-black text-ruby uppercase px-2 py-1 bg-white/10 rounded-md active:scale-95 transition-all">Copiar</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Export Section - Horizontal on Desktop, Vertical on Mobile */}

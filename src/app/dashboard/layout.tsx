@@ -28,27 +28,46 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      setChecking(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.replace("/");
-        return;
-      }
+    let mounted = true;
 
-      setAuthenticated(true);
-      setAuthorized(true);
-      setChecking(false);
+    const checkAccess = async () => {
+      try {
+        setChecking(true);
+        // Timeout de 5s para não ficar travado infinitamente
+        const timeout = setTimeout(() => {
+          if (mounted) setChecking(false);
+        }, 5000);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        clearTimeout(timeout);
+        
+        if (!mounted) return;
+
+        if (!session) {
+          router.replace("/");
+          return;
+        }
+
+        setAuthenticated(true);
+        setAuthorized(true);
+      } catch (error) {
+        console.error("Erro ao validar acesso:", error);
+        if (mounted) router.replace("/");
+      } finally {
+        if (mounted) setChecking(false);
+      }
     };
 
     checkAccess();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.replace("/");
+      if (!session && mounted) router.replace("/");
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   useEffect(() => {
@@ -97,7 +116,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </button>
         <div className="flex-1 flex flex-col items-center justify-center -ml-8">
            <img src="/spotlight-nobg.png" alt="Spotlight" className="h-14 w-auto object-contain" />
-           <span className={`text-[10px] font-black uppercase tracking-[0.2em] -mt-1 ${theme === 'dark' ? 'text-white' : 'text-zinc-900'}`}>Modo Casa</span>
         </div>
       </header>
 
