@@ -137,14 +137,14 @@ export default function RelatoriosPage() {
       <div className="flex flex-col items-center text-center md:text-left md:items-start md:flex-row justify-between mb-8 gap-6 print:hidden">
         <div className="animate-in slide-in-from-left duration-500">
           <h1 className="text-3xl font-bold tracking-tight text-ruby">Relatórios gerenciais</h1>
-          <p className="text-zinc-500 mt-1 font-medium">Controle de equipe, bilheteria e histórico de ações.</p>
+          <p className="text-zinc-500 mt-1 font-medium">Controle de equipe, portaria e histórico de auditoria.</p>
         </div>
         <Button variant="outline" onClick={handlePrint} className="cursor-pointer font-bold border-zinc-200 dark:border-white/10 dark:text-white rounded-xl h-11 px-6 shadow-sm"><Printer className="w-4 h-4 mr-2" />Imprimir Relatório</Button>
       </div>
 
       <div className="flex justify-center md:justify-start gap-4 border-b border-zinc-200 dark:border-zinc-800 mb-8 print:hidden overflow-x-auto whitespace-nowrap scrollbar-hide">
         <button onClick={() => setActiveTab('staff')} className={tabClass('staff')}><div className="flex items-center gap-2"><User className="w-4 h-4" />Por Funcionário</div>{activeTab === 'staff' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-ruby rounded-t-full" />}</button>
-        <button onClick={() => setActiveTab('guests')} className={tabClass('guests')}><div className="flex items-center gap-2"><Ticket className="w-4 h-4" />Bilheteria</div>{activeTab === 'guests' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-ruby rounded-t-full" />}</button>
+        <button onClick={() => setActiveTab('guests')} className={tabClass('guests')}><div className="flex items-center gap-2"><Ticket className="w-4 h-4" />Portaria / Convidados</div>{activeTab === 'guests' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-ruby rounded-t-full" />}</button>
         <button onClick={() => setActiveTab('audit')} className={tabClass('audit')}><div className="flex items-center gap-2"><ShieldAlert className="w-4 h-4" />Auditoria</div>{activeTab === 'audit' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-ruby rounded-t-full" />}</button>
       </div>
 
@@ -301,7 +301,7 @@ export default function RelatoriosPage() {
 
                       <div className="flex items-center justify-center pt-4 border-t border-zinc-100 mt-auto">
                         <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                          Relatório de Bilheteria
+                          Relatório de Portaria
                         </div>
                       </div>
                     </div>
