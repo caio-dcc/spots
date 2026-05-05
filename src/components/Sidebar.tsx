@@ -91,8 +91,8 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
       <div className="h-32 flex flex-col items-center justify-center px-6 bg-sidebar">
         <img src="/spotlight-nobg.png" alt="Spotlight" className="h-[60px] w-auto object-contain" />
         <div className="flex flex-col items-center mt-2">
-          <span className="text-ruby font-black text-[11px] uppercase tracking-[0.2em]">Modo Casa</span>
-          <span className="text-[8px] font-black text-black uppercase tracking-[0.3em] mt-[10px]">Versão 0.0.5</span>
+          <span className="text-ruby font-black text-[11px] uppercase tracking-[0.2em]">ERP Organizador</span>
+          <span className="text-[8px] font-black text-black uppercase tracking-[0.3em] mt-[10px]">Theaters Edition</span>
         </div>
       </div>
 
@@ -191,16 +191,6 @@ export const Sidebar = memo(function Sidebar({ onClose }: { onClose?: () => void
           </div>
         </div>
 
-        {/* Venda Online */}
-        <Link
-          href={`${base}/vendas`}
-          onClick={onClose}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all mt-2 ${isActive('/vendas') ? 'bg-ruby/10 text-ruby shadow-lg shadow-ruby/5' : 'text-zinc-500 hover:text-ruby hover:bg-white/5'}`}
-        >
-          <ShoppingCart className={`w-[17px] h-[17px] ${isActive('/vendas') ? 'text-ruby' : 'text-zinc-600'}`} />
-          Vendas
-          <span className="ml-auto text-[8px] bg-ruby/10 text-ruby px-1.5 py-0.5 rounded-full font-black">NOVO</span>
-        </Link>
 
         <Link
           href={`${base}/configuracoes`}
