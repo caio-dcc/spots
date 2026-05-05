@@ -350,8 +350,8 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
               <div className="pt-6 border-t border-zinc-100 dark:border-white/5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h3 className="font-bold text-zinc-900 dark:text-white text-lg">Tipos de Ingresso</h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Defina VIP, Normal, Convênios, etc. A soma deve ser {capacity || 0}.</p>
+                    <h3 className="font-bold text-zinc-900 dark:text-white text-lg">Ingressos Vendidos</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Defina VIP, Normal, Convênios, etc.</p>
                   </div>
                   <Button onClick={addBeneficio} className="w-full md:w-auto rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border border-zinc-200 font-bold h-10 gap-2 px-4 shadow-sm transition-all active:scale-95 cursor-pointer shrink-0">
                     <Plus className="w-4 h-4 text-ruby stroke-[3]" /> Adicionar Tipo
@@ -384,11 +384,6 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
                         </div>
                       </div>
                     ))}
-                    {beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0) !== (parseInt(capacity) || 0) && (
-                      <p className="text-[10px] text-ruby font-black uppercase text-center mt-2 animate-pulse">
-                        A soma das quantidades ({beneficios.reduce((acc, b) => acc + (parseInt(b.quantidade) || 0), 0)}) deve ser igual à capacidade total ({capacity || 0})
-                      </p>
-                    )}
                   </div>
                 )}
               </div>
