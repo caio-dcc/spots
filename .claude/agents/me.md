@@ -26,28 +26,24 @@ I'm performing a clean code split along the seam between *back-office event mana
 
 ### Phase 0 — Safety setup ✅
 - [x] Stash uncommitted work
-- [ ] Tag current main as `pre-split-archive` for rollback
-- [ ] Create `ticket-sales-legacy` branch from current main (full code, will be stripped later)
+- [x] Tag current main as `pre-split-archive` for rollback
+- [x] Create `ticket-sales-legacy` branch from current main (full code, will be stripped later)
 
-### Phase 1 — Inventory the seam
-Map every file/route into:
-- **ERP-only** (organizer dashboards, event CRUD, finance, employees, admin)
-- **Ticket-sales-only** (`/api/checkout`, `/api/webhooks/stripe`, `/api/tickets/*`, `/e/[slug]`, `/meus-pedidos`, `/mosaico-eventos`, `/confirmacao`, `TicketPurchaseModal`, dynamic QR, Stripe Connect, etc.)
-- **Shared** (auth, supabase clients, layout, Sidebar, design system)
-- **Out-of-scope** (location management — flagged for removal)
+### Phase 1 — Inventory the seam ✅
+- [x] Map every file/route into ERP, Ticket-sales, Shared, Out-of-scope.
+- [x] Output as `SPLIT_INVENTORY.md` for owner review.
 
-Output as `SPLIT_INVENTORY.md` for owner review *before* cuts.
+### Phase 2 — SQL consolidation ✅
+- [x] Read every `.sql` in `supabase/migrations/` (and anywhere else).
+- [x] Write `SQL_history.md` with sections ordered chronologically by filename timestamp.
+- [x] Delete originals after consolidation.
 
-### Phase 2 — SQL consolidation
-- Read every `.sql` in `supabase/migrations/` (and anywhere else).
-- Write `SQL_history.md` with sections ordered chronologically by filename timestamp.
-- Delete originals after consolidation.
-
-### Phase 3 — Strip ticket-sales from `main` (the ERP)
-- Remove ticket-sales routes, components, libs identified in inventory.
-- Reorient `Sidebar` and dashboards around expense/revenue consolidation.
-- Remove Stripe checkout/customer flows; keep Stripe Connect *only if* needed for organizer payout reporting (TBD — flag to owner).
-- Build & lint must pass.
+### Phase 3 — Strip ticket-sales from `main` (the ERP) ✅
+- [x] Remove ticket-sales routes (`app/e`, `app/mosaico-eventos`, `app/meus-pedidos`, `app/api/checkout`, etc.).
+- [x] Reorient `Sidebar` and `HomePage` around expense/revenue/production consolidation.
+- [x] Update Admin Dashboard to remove ticket-sales metrics.
+- [x] Remove Stripe checkout/customer flows; keep Stripe Connect *only if* needed for organizer payout reporting (TBD — flag to owner).
+- [ ] Build & lint must pass.
 
 ### Phase 4 — Strip ERP from `ticket-sales-legacy`
 - Switch to that branch.
