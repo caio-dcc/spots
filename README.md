@@ -1,6 +1,5 @@
-# Spotlight - Bilheteria + Gestao de Eventos
+# Spotlight -  Gestao de Eventos
 
-Sistema web para venda de ingressos (cliente) e operacao de eventos (organizador), com checkout Stripe, check-in por QR Code e painel financeiro.
 
 ## Variaveis de ambiente
 
