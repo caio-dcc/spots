@@ -6,44 +6,44 @@ import { BlurText } from "./ui/BlurText";
 
 const features = [
   {
-    title: "Infraestrutura Enterprise",
-    subtitle: "Soluções robustas para teatros, arenas e produções que exigem controle absoluto e escalabilidade.",
+    title: "Gestão de Backstage",
+    subtitle: "Soluções robustas para teatros, arenas e produções que exigem controle absoluto de staff e segurança.",
     items: [
       { 
-        icon: Ticket, 
-        title: "Bilheteria Inteligente & SaaS", 
-        desc: "Venda multicanal com gestão de lotes dinâmicos, split de pagamentos via Stripe Connect e cupons estratégicos." 
+        icon: Users, 
+        title: "Staff & Freelancers", 
+        desc: "Controle em tempo real de equipes, diárias e pagamentos com fluxo de aprovação profissional." 
       },
       { 
-        icon: Users, 
-        title: "BI Operacional & Backstage", 
-        desc: "Controle em tempo real de staff, segurança e terceiros com logs de auditoria e métricas de performance da equipe." 
+        icon: Shield, 
+        title: "Segurança & Acesso", 
+        desc: "Gestão de listas de convidados, credenciamento e controle de acesso para áreas restritas." 
       },
       { 
         icon: Layout, 
-        title: "Engenharia de Assentos", 
-        desc: "Mapas interativos, cadeiras numeradas e setores VIP customizáveis para máxima rentabilidade por metro quadrado." 
+        title: "Mapa de Assentos", 
+        desc: "Gestão técnica de ocupação, cadeiras numeradas e setores para teatros de todos os tamanhos." 
       },
     ]
   },
   {
-    title: "Inteligência de Receita",
-    subtitle: "Transforme dados em lucro com ferramentas de análise preditiva focadas em esgotar sua bilheteria.",
+    title: "Inteligência Financeira",
+    subtitle: "Controle total sobre a saúde financeira da sua produção com dashboards de alta densidade.",
     items: [
       { 
         icon: BarChart3, 
-        title: "Predictive Analytics", 
-        desc: "Dashboards de alta densidade com perfil de público, comportamento de compra e monitoramento de ROI em tempo real." 
+        title: "Controle de Despesas", 
+        desc: "Lançamento de custos operacionais, cachês e infraestrutura com relatórios automáticos." 
       },
       { 
         icon: Zap, 
-        title: "Checkout de Alta Conversão", 
-        desc: "Experiência de compra Frictionless (2.0) otimizada para mobile, reduzindo o abandono de carrinho e maximizando o faturamento." 
+        title: "Fluxo de Caixa", 
+        desc: "Visão consolidada de entradas e saídas, permitindo uma gestão ágil do capital de produção." 
       },
       { 
         icon: Shield, 
-        title: "Segurança & Acesso 360", 
-        desc: "Validação de ingressos antifraude com QR Codes dinâmicos e sincronização ultra-rápida para grandes fluxos de público." 
+        title: "Logs de Auditoria", 
+        desc: "Rastreabilidade completa de todas as alterações financeiras e operacionais realizadas no sistema." 
       },
     ]
   }

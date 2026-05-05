@@ -8,7 +8,6 @@ import { BlurText } from "@/components/ui/BlurText";
 import { 
   Check
 } from "lucide-react";
-import { EventMosaic } from "@/components/EventMosaic";
 import { FeaturesSection } from "@/components/FeaturesSection";
 
 export default function HomePage() {
@@ -55,7 +54,7 @@ export default function HomePage() {
             </div>
 
             <BlurText
-              text="Gestão de Eventos, Shows e Bilheteria para Produtores Culturais"
+              text="Gestão de Eventos, Shows e Produção para Produtores Culturais"
               className="text-4xl md:text-7xl font-black text-white tracking-tighter leading-[0.9] uppercase break-words"
               delay={50}
               animateBy="words"
@@ -63,22 +62,24 @@ export default function HomePage() {
             />
 
             <p className="text-white/60 text-lg md:text-xl font-medium leading-relaxed max-w-lg">
-              A <span className="text-white">Spotlight</span> é a ferramenta definitiva para organizadores de eventos. Tenha o <span className="text-white">controle total de freelancers, diárias e staff</span> em um fluxo profissional e integrado.
+              A <span className="text-white">Spotlight ERP</span> é a ferramenta definitiva para organizadores de eventos. Tenha o <span className="text-white">controle total de despesas, staff e produção</span> em um fluxo profissional e integrado.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
               {authChecked && !isLoggedIn && (
                 <Link href="/login" className="w-full sm:w-auto">
                   <button className="w-full px-10 py-5 rounded-full bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-zinc-200 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
-                    Registrar-se
+                    Começar Agora
                   </button>
                 </Link>
               )}
-              <Link href="/mosaico-eventos" className="w-full sm:w-auto">
-                <button className="w-full px-10 py-5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-white/20 cursor-pointer active:scale-95">
-                  Ver Eventos
-                </button>
-              </Link>
+              {isLoggedIn && (
+                <Link href="/dashboard" className="w-full sm:w-auto">
+                  <button className="w-full px-10 py-5 rounded-full bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-zinc-200 cursor-pointer active:scale-95 shadow-xl shadow-white/5">
+                    Acessar Dashboard
+                  </button>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -95,7 +96,7 @@ export default function HomePage() {
                   />
                   <text className="fill-white text-[24px] font-black uppercase tracking-[0.4em]">
                     <textPath xlinkHref="#circlePathHero">
-                      Spotlight • Cultura • Arte • Gestão • Bilheteria • 
+                      Spotlight • Cultura • Arte • Gestão • Produção • 
                     </textPath>
                   </text>
                 </svg>
@@ -129,7 +130,6 @@ export default function HomePage() {
       {/* Rest of the content - Background set to black explicitly */}
       <div className="bg-black relative z-10">
         <FeaturesSection />
-        <EventMosaic />
       </div>
 
       <Footer accentColor="#810B14" />
