@@ -15,7 +15,7 @@ import {
   ShieldQuestion,
   LogOut
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 
 export function ModuleNav() {
   const pathname = usePathname();
@@ -79,16 +79,19 @@ export function ModuleNav() {
 
   const handleLogout = async () => {
     const { toast } = await import('sonner');
+    const { clearMemberContextCache } = await import('@/lib/auth-context');
+    clearMemberContextCache();
     await supabase.auth.signOut();
     toast.success("Sessão encerrada com sucesso");
     window.location.href = "/";
   };
 
-  // Hide on dashboard pages
-  if (pathname?.includes('/dashboard')) return null;
+  // Hide on dashboard and admin pages
+  if (pathname?.includes('/dashboard') || pathname?.includes('/admin')) return null;
 
   const navLinks = [
     { label: 'Início', href: '/' },
+    { label: 'Eventos', href: '/eventos-publicos' },
     { label: 'Sobre', href: '/sobre' },
   ];
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2, FileDown, Printer, UserX, CheckCircle2, Minus, Plus, Save } from "lucide-react";
+import { Search, Loader2, FileDown, Printer, UserX, CheckCircle2, Minus, Plus, Save, ScanLine } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,25 +17,82 @@ export default function CheckinPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  
+  const [ticketQrInput, setTicketQrInput] = useState("");
+  const [ticketQrBusy, setTicketQrBusy] = useState(false);
+
   useEffect(() => {
     const fetchEvents = async () => {
       const { getContextUserId } = await import("@/lib/auth-context");
       const userId = await getContextUserId();
       if (!userId) return;
 
-      const { data } = await supabase
-        .from('events')
-        .select('id, title, event_date')
-        .eq('user_id', userId)
-        .is('deleted_at', null)
-        .neq('status', 'finalizado')
-        .order('event_date', { ascending: false });
+      const { data: memberships } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", userId);
 
+      const orgIds = (memberships ?? [])
+        .map((m: { organization_id: string }) => m.organization_id)
+        .filter(Boolean);
+
+      let q = supabase
+        .from("events")
+        .select("id, title, event_date")
+        .is("deleted_at", null)
+        .neq("status", "finalizado")
+        .order("event_date", { ascending: false });
+
+      if (orgIds.length > 0) {
+        q = q.or(`user_id.eq.${userId},organization_id.in.(${orgIds.join(",")})`);
+      } else {
+        q = q.eq("user_id", userId);
+      }
+
+      const { data } = await q;
       setEvents(data || []);
     };
-    fetchEvents();
+    void fetchEvents();
   }, []);
+
+  const validatePaidTicket = async () => {
+    if (!selectedEventId || !ticketQrInput.trim()) {
+      toast.error("Cole o conteúdo do QR (ingresso pago) ou o código estático.");
+      return;
+    }
+    setTicketQrBusy(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Sessão expirada.");
+        return;
+      }
+      const origin = window.location.origin;
+      const res = await fetch(`${origin}/api/tickets/validate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          Origin: origin,
+        },
+        body: JSON.stringify({
+          eventId: selectedEventId,
+          qrCode: ticketQrInput.trim(),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof body.error === "string" ? body.error : "Falha na validação");
+      }
+      toast.success(`Ingresso validado: ${body.buyerName ?? "Cliente"}`);
+      setTicketQrInput("");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao validar ingresso");
+    } finally {
+      setTicketQrBusy(false);
+    }
+  };
 
   useEffect(() => {
     const fetchGuests = async () => {
@@ -246,6 +303,32 @@ export default function CheckinPage() {
 
           {selectedEventId && (
             <>
+              <div className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-[2rem] p-6 backdrop-blur-xl space-y-4">
+                <div className="flex items-center gap-2">
+                  <ScanLine className="w-4 h-4 text-ruby" />
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                    Ingressos vendidos (QR)
+                  </p>
+                </div>
+                <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
+                  Cole o payload do QR dinâmico ou o código fixo do pedido. Exige permissão de check-in na organização.
+                </p>
+                <Input
+                  placeholder="Conteúdo lido do QR..."
+                  value={ticketQrInput}
+                  onChange={(e) => setTicketQrInput(e.target.value)}
+                  className="bg-white dark:bg-black/40 border-zinc-200 dark:border-white/10 h-12 rounded-xl text-xs font-mono text-zinc-900 dark:text-white"
+                />
+                <Button
+                  type="button"
+                  onClick={() => void validatePaidTicket()}
+                  disabled={ticketQrBusy || !ticketQrInput.trim()}
+                  className="w-full bg-ruby hover:bg-ruby/90 text-white border-0 rounded-xl h-11 font-black text-[10px] uppercase tracking-widest"
+                >
+                  {ticketQrBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirmar ingresso"}
+                </Button>
+              </div>
+
               <div className="bg-ruby/5 border border-ruby/10 rounded-[2rem] p-6">
                 <p className="text-[10px] font-black text-ruby/60 uppercase tracking-widest mb-2">Estatísticas</p>
                 <div className="flex justify-between items-end">

@@ -10,6 +10,7 @@ import { useRouter, useParams } from "next/navigation";
 import { maskCurrency, unmaskCurrency, validateEvent, ValidationError } from "@/lib/masks";
 import { toast } from "sonner";
 import { logAction } from "@/lib/audit";
+import { unifiedSelectClass } from "@/lib/input-style";
 
 interface Beneficio { id: string; nome: string; valor_mask: string; quantidade: string; }
 interface FuncionarioAssociado { id: string; nome: string; cargo: string; temDiaria: boolean; valorDiaria: number | ""; horarioChegada: string; eh_fixo: boolean; salario?: number; }
@@ -17,6 +18,13 @@ interface FuncionarioAssociado { id: string; nome: string; cargo: string; temDia
 interface EventFormProps {
   initialData?: any;
   isEdit?: boolean;
+}
+
+interface LocationOption {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
 }
 
 export function EventForm({ initialData, isEdit }: EventFormProps) {
@@ -34,12 +42,14 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
     return new Date().toISOString().split('T')[0];
   });
   const [eventTime, setEventTime] = useState(initialData?.event_time || "");
+  const [locationId, setLocationId] = useState<string>(initialData?.location_id || "");
   const [capacity, setCapacity] = useState(initialData?.capacity?.toString() || "");
   const [tecnicoSom, setTecnicoSom] = useState(initialData?.tecnico_som || "");
   const [tecnicoIluminacao, setTecnicoIluminacao] = useState(initialData?.tecnico_iluminacao || "");
   const [produtor, setProdutor] = useState(initialData?.produtor || "");
   const [details, setDetails] = useState(initialData?.details || initialData?.additional_details || "");
   const [isPublic, setIsPublic] = useState(initialData?.is_public || false);
+  const [orgPlanTier, setOrgPlanTier] = useState<string>("essencial");
   
   const [beneficios, setBeneficios] = useState<Beneficio[]>([]);
   const [funcionariosAssoc, setFuncionariosAssoc] = useState<FuncionarioAssociado[]>([]);
@@ -52,13 +62,15 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
   const [novoArtistaNome, setNovoArtistaNome] = useState("");
   const [novoArtistaCache, setNovoArtistaCache] = useState("");
   const [dbFuncionarios, setDbFuncionarios] = useState<any[]>([]);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
-      const { getContextUserId } = await import("@/lib/auth-context");
+      const { getContextUserId, getCurrentOrganizationId } = await import("@/lib/auth-context");
       const userId = await getContextUserId();
       if (!userId) return;
+      const organizationId = await getCurrentOrganizationId();
 
       const { data } = await supabase.from('employees')
         .select('id, nome, cargo, diaria, salario, eh_fixo, theater_id')
@@ -67,6 +79,24 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
         .eq('status', 'ativo')
         .order('nome');
       setDbFuncionarios(data || []);
+
+      if (organizationId) {
+        const [{ data: locationsData }, { data: orgRow }] = await Promise.all([
+          supabase
+            .from("locations")
+            .select("id,name,city,state")
+            .eq("organization_id", organizationId)
+            .eq("is_active", true)
+            .is("deleted_at", null)
+            .order("name"),
+          supabase.from("organizations").select("plan_tier").eq("id", organizationId).maybeSingle(),
+        ]);
+        setLocations((locationsData as LocationOption[]) || []);
+        setOrgPlanTier((orgRow as { plan_tier?: string } | null)?.plan_tier ?? "essencial");
+      } else {
+        setLocations([]);
+        setOrgPlanTier("essencial");
+      }
     };
     loadData();
 
@@ -160,6 +190,13 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
       const userId = await getContextUserId();
       if (!userId) throw new Error("Não autenticado");
 
+      const tierAllowsPublic = orgPlanTier === "profissional" || orgPlanTier === "enterprise";
+      if (isPublic && !tierAllowsPublic) {
+        toast.error("Seu plano SaaS não inclui venda pública no site (Profissional ou Enterprise).");
+        setSaving(false);
+        return;
+      }
+
       let finalArtistas = [...artistas];
       if (novoArtistaNome.trim()) {
         finalArtistas.push({ nome: novoArtistaNome.trim(), cache: novoArtistaCache || "0,00" });
@@ -169,6 +206,7 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
         title,
         event_date: eventDate,
         event_time: eventTime || null,
+        location_id: locationId || null,
         capacity: Number(capacity),
         ticket_price: beneficios.length > 0 ? unmaskCurrency(beneficios[0].valor_mask) : 0,
         tecnico_som: tecnicoSom || null,
@@ -311,6 +349,24 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
                     <Input type="time" className="bg-zinc-50 dark:bg-zinc-900/50 h-14 rounded-2xl border-zinc-200 px-6 text-zinc-900 dark:text-white transition-all focus:ring-ruby shadow-sm" value={eventTime} onChange={e => setEventTime(e.target.value)} />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Localidade do Evento</label>
+                  <select
+                    className={unifiedSelectClass}
+                    value={locationId}
+                    onChange={(e) => setLocationId(e.target.value)}
+                  >
+                    <option value="">Selecione uma localidade</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                        {loc.city ? ` - ${loc.city}` : ""}
+                        {loc.state ? `/${loc.state}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </section>
 
@@ -322,11 +378,36 @@ export function EventForm({ initialData, isEdit }: EventFormProps) {
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Bilheteria & Benefícios</h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-8 mb-8 items-end">
+                <div className="grid grid-cols-1 gap-8 mb-8 items-end">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-zinc-500 dark:text-zinc-400 ml-1">Capacidade Total de Ingressos</label>
                   <Input type="number" placeholder="Ex: 450" className="bg-zinc-50 dark:bg-zinc-900/50 h-14 rounded-2xl border-zinc-200 px-6 text-lg font-bold text-zinc-900 dark:text-white transition-all focus:ring-ruby shadow-sm" value={capacity} onChange={e => setCapacity(e.target.value)} />
                 </div>
+              </div>
+
+              <div className="mb-8 rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50/80 dark:bg-white/5 p-6 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    disabled={!(orgPlanTier === "profissional" || orgPlanTier === "enterprise")}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-zinc-300 text-ruby focus:ring-ruby disabled:opacity-40 disabled:cursor-not-allowed"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-zinc-900 dark:text-white">
+                      Publicar na vitrine do site (eventos públicos)
+                    </span>
+                    <span className="block text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                      Permite que clientes logados comprem ingressos na página de eventos públicos. Disponível nos planos Profissional e Enterprise.
+                    </span>
+                  </span>
+                </label>
+                {!(orgPlanTier === "profissional" || orgPlanTier === "enterprise") && (
+                  <p className="text-xs font-medium text-amber-600 dark:text-amber-500">
+                    Plano atual ({orgPlanTier}): faça upgrade para habilitar venda pública no site.
+                  </p>
+                )}
               </div>
 
               <div className="mb-8 p-6 bg-ruby/5 rounded-2xl border border-ruby/10 flex flex-col md:flex-row justify-between items-center gap-4">

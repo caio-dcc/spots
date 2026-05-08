@@ -29,7 +29,12 @@ export default function CustomerLoginPage() {
         throw new Error("Admins devem usar o login do painel. Acesse /house/login");
       }
 
-      router.push("/mosaico-eventos");
+      const params =
+        typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const next = params?.get("next");
+      const dest =
+        next && next.startsWith("/") && !next.startsWith("//") ? next : "/eventos-publicos";
+      router.push(dest);
       toast.success("Login realizado com sucesso!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao fazer login");
