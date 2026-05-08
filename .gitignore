@@ -42,6 +42,8 @@ next-env.d.ts
 
 # AI / System
 /.gemini/
+/.claude/
+/.agents/
 /brain/
 /scratch/
 
